@@ -14,8 +14,10 @@ limitations under the License.
 ==============================================================================*/
 
 #include <functional>
-#include <vector>
 
+#include "tensorflow/core/public/session_options.h"
+
+#include <gtest/gtest.h>
 #include "tensorflow/core/common_runtime/device.h"
 #include "tensorflow/core/common_runtime/device_factory.h"
 #include "tensorflow/core/common_runtime/kernel_benchmark_testlib.h"
@@ -24,17 +26,14 @@ limitations under the License.
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/framework/node_def_builder.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_testutil.h"
 #include "tensorflow/core/framework/types.h"
 #include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow/core/graph/node_builder.h"
 #include "tensorflow/core/graph/testlib.h"
-#include "tensorflow/core/kernels/ops_testutil.h"
 #include "tensorflow/core/kernels/ops_util.h"
-#include "tensorflow/core/platform/test.h"
 #include "tensorflow/core/platform/test_benchmark.h"
-#include "tensorflow/core/public/session_options.h"
+#include "tensorflow/core/public/tensor.h"
 #include "tensorflow/core/public/version.h"
 
 namespace tensorflow {
@@ -73,11 +72,16 @@ static void BM_SegmentReduction(int iters, string reduction, Index num_rows,
   params.frame_iter = FrameAndIter(0, 0);
   params.inputs = &reduction_inputs;
   params.op_kernel = reduction_op.get();
-  std::vector<AllocatorAttributes> attrs;
-  test::SetOutputAttrs(&params, &attrs);
+  params.output_alloc_attr = [&device, &reduction_op, &params](int index) {
+    AllocatorAttributes attr;
+    const bool on_host =
+        (reduction_op->output_memory_types()[index] == HOST_MEMORY);
+    attr.set_on_host(on_host);
+    return attr;
+  };
 
   std::unique_ptr<OpKernelContext> reduction_context(
-      new OpKernelContext(&params));
+      new OpKernelContext(params));
 
   reduction_op->Compute(reduction_context.get());
   TF_CHECK_OK(reduction_context->status());

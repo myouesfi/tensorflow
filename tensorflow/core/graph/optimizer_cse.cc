@@ -39,7 +39,6 @@ limitations under the License.
 #include "tensorflow/core/graph/optimizer_cse.h"
 
 #include <unordered_map>
-#include <vector>
 
 #include "tensorflow/core/graph/algorithm.h"
 #include "tensorflow/core/lib/gtl/map_util.h"
@@ -52,7 +51,7 @@ class OptimizerCSE {
  public:
   explicit OptimizerCSE(Graph* g) : g_(g) {}
 
-  bool Optimize(std::function<bool(const Node*)> consider_fn);
+  void Optimize(std::function<bool(const Node*)> consider_fn);
 
  private:
   struct Scratch;
@@ -180,7 +179,7 @@ bool OptimizerCSE::Equivalent(const Node* a, const Node* b, Scratch* scratch) {
   return true;
 }
 
-bool OptimizerCSE::Optimize(std::function<bool(const Node*)> consider_fn) {
+void OptimizerCSE::Optimize(std::function<bool(const Node*)> consider_fn) {
   // This very simple implementation works if the whole graph is one
   // giant basic block (because we just traverse nodes in a
   // topological order).  We'll need to do something more
@@ -202,7 +201,6 @@ bool OptimizerCSE::Optimize(std::function<bool(const Node*)> consider_fn) {
 
   // Scratch space for Equivalent calls.  Allocated here and passed in to
   // Equivalent to avoid allocation inside the loop below.
-  bool changed = false;
   Scratch scratch;
   for (Node* n : order) {
     if (!n->IsOp()) continue;
@@ -225,15 +223,13 @@ bool OptimizerCSE::Optimize(std::function<bool(const Node*)> consider_fn) {
         g_->AddEdge(*candidate, e->src_output(), e->dst(), e->dst_input());
       }
       g_->RemoveNode(n);
-      changed = true;
     }
   }
-  return changed;
 }
 
-bool OptimizeCSE(Graph* g, std::function<bool(const Node*)> consider_fn) {
+void OptimizeCSE(Graph* g, std::function<bool(const Node*)> consider_fn) {
   OptimizerCSE opt(g);
-  return opt.Optimize(consider_fn);
+  opt.Optimize(consider_fn);
 }
 
 }  // namespace tensorflow

@@ -207,9 +207,9 @@ class ExponentialMovingAverage(object):
       var_list = variables.trainable_variables()
     for var in var_list:
       if var.dtype.base_dtype not in [dtypes.float32, dtypes.float64]:
-        raise TypeError("The variables must be float or double: %s" % var.name)
+        raise TypeError("The variables must be float or double: %s" % var)
       if var in self._averages:
-        raise ValueError("Moving average already computed for: %s" % var.name)
+        raise ValueError("Moving average already computed for: %s" % var)
 
       # For variables: to lower communication bandwidth across devices we keep
       # the moving averages on the same device as the variables. For other
@@ -268,7 +268,7 @@ class ExponentialMovingAverage(object):
       var: A `Variable` object.
 
     Returns:
-      A string: The name of the variable that will be used or was used
+      A string: the name of the variable that will be used or was used
       by the `ExponentialMovingAverage class` to hold the moving average of
       `var`.
     """

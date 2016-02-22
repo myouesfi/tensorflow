@@ -18,16 +18,15 @@ limitations under the License.
 // the --benchmark_filter flag which specifies which benchmarks to run,
 // we will either run benchmarks or run the gtest tests in the program.
 
-#include "tensorflow/core/platform/platform.h"
+#include <iostream>
+
+#include "tensorflow/core/platform/port.h"
 
 #if defined(PLATFORM_GOOGLE) || defined(__ANDROID__)
 // main() is supplied by gunit_main
 #else
-
-#include <iostream>
-
+#include "gtest/gtest.h"
 #include "tensorflow/core/lib/core/stringpiece.h"
-#include "tensorflow/core/platform/test.h"
 #include "tensorflow/core/platform/test_benchmark.h"
 
 GTEST_API_ int main(int argc, char** argv) {

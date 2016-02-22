@@ -15,9 +15,8 @@ limitations under the License.
 
 #include "tensorflow/core/framework/tensor_util.h"
 
-#include <vector>
-#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/lib/core/stringpiece.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
 namespace tensor {
@@ -41,7 +40,7 @@ Tensor DeepCopy(const Tensor& other) {
 }
 
 Tensor Concat(const gtl::ArraySlice<Tensor>& tensors) {
-  CHECK_GT(tensors.size(), size_t{0});
+  CHECK_GT(tensors.size(), 0);
   int64 total_dim0_size = 0;
   for (const Tensor& tensor : tensors) {
     CHECK_GT(tensor.dims(), 0);

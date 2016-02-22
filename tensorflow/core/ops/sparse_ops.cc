@@ -114,9 +114,8 @@ REGISTER_OP("SparseToDense")
     .Input("output_shape: Tindices")
     .Input("sparse_values: T")
     .Input("default_value: T")
-    .Attr("validate_indices: bool = true")
-    .Attr("T: type")
     .Output("dense: T")
+    .Attr("T: type")
     .Attr("Tindices: {int32, int64}")
     .Doc(R"doc(
 Converts a sparse representation into a dense tensor.
@@ -137,10 +136,6 @@ dense[sparse_indices[i][0], ..., sparse_indices[i][d-1]] = sparse_values[i]
 All other values in `dense` are set to `default_value`.  If `sparse_values` is a
 scalar, all sparse indices are set to this single value.
 
-Indices should be sorted in lexicographic order, and indices must not
-contain any repeats. If `validate_indices` is true, these properties
-are checked during execution.
-
 sparse_indices: 0-D, 1-D, or 2-D.  `sparse_indices[i]` contains the complete
   index where `sparse_values[i]` will be placed.
 output_shape: 1-D.  Shape of the dense output tensor.
@@ -148,8 +143,6 @@ sparse_values: 1-D.  Values corresponding to each row of `sparse_indices`,
   or a scalar value to be used for all sparse indices.
 default_value: Scalar value to set for indices not specified in
   `sparse_indices`.
-validate_indices: If true, indices are checked to make sure they are sorted in
-  lexicographic order and that there are no repeats.
 dense: Dense output tensor of shape `output_shape`.
 )doc");
 

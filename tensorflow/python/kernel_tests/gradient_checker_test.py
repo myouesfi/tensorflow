@@ -27,7 +27,6 @@ import tensorflow as tf
 class GradientCheckerTest(tf.test.TestCase):
 
   def testAddSimple(self):
-    np.random.seed(1)  # Fix seed to avoid flakiness
     with self.test_session(use_gpu=False):
       # a test case for Add operation
       size = (2, 3)
@@ -41,7 +40,6 @@ class GradientCheckerTest(tf.test.TestCase):
     assert error < 1e-4
 
   def testAddSimpleGPU(self):
-    np.random.seed(2)  # Fix seed to avoid flakiness
     with self.test_session(use_gpu=True):
       # a test case for Add operation
       size = (2, 3)
@@ -55,7 +53,6 @@ class GradientCheckerTest(tf.test.TestCase):
     assert error < 1e-4
 
   def testAddCustomized(self):
-    np.random.seed(3)  # Fix seed to avoid flakiness
     with self.test_session():
       # a test case for Add operation
       size = (2, 3)
@@ -77,7 +74,6 @@ class GradientCheckerTest(tf.test.TestCase):
     assert error < 1e-10
 
   def testGather(self):
-    np.random.seed(4)  # Fix seed to avoid flakiness
     with self.test_session():
       p_shape = (4, 2)
       p_size = 8
@@ -93,7 +89,6 @@ class GradientCheckerTest(tf.test.TestCase):
     assert error < 1e-4
 
   def testNestedGather(self):
-    np.random.seed(5)  # Fix seed to avoid flakiness
     with self.test_session():
       p_shape = (8, 2)
       p_size = 16
@@ -115,9 +110,6 @@ class GradientCheckerTest(tf.test.TestCase):
 
 # Gradient checker for MNIST.
 def BuildAndTestMiniMNIST(param_index, tag):
-  # Fix seed to avoid occasional flakiness
-  np.random.seed(6)
-
   # Hyperparameters
   batch = 3
   inputs = 16

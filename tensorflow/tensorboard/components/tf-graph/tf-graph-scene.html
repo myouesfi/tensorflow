@@ -98,7 +98,10 @@ Polymer({
   properties: {
     renderHierarchy: Object,
     name: String,
-    colorBy: String,
+    colorBy: {
+      type: String,
+      observer: '_colorByChanged'
+    },
     /** @type {d3_zoom} d3 zoom object */
     _zoom: Object,
     highlightedNode: {
@@ -198,7 +201,6 @@ Polymer({
     progress: Object
   },
   observers: [
-    '_colorByChanged(colorBy)',
     '_buildAndFit(renderHierarchy)'
   ],
   getNode: function(nodeName) {
@@ -232,7 +234,7 @@ Polymer({
     this.templateIndex = renderHierarchy.hierarchy.getTemplateIndex();
     tf.time('tf-graph-scene (layout):', function() {
       // layout the scene for this meta / series node
-      tf.graph.layout.layoutScene(renderHierarchy.root, this);
+      tf.graph.layout.scene(renderHierarchy.root, this);
     }.bind(this));
 
     tf.time('tf-graph-scene (build scene):', function() {
@@ -332,6 +334,10 @@ Polymer({
       auxTitleStyle.display = 'none';
     }
   },
+
+
+
+
   /**
     * Called whenever the user changed the 'color by' option in the
     * UI controls.

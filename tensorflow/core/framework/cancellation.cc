@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "tensorflow/core/framework/cancellation.h"
 
+#include <vector>
+
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/logging.h"
 

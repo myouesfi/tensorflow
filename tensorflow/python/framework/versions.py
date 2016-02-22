@@ -25,11 +25,9 @@ from tensorflow.python import pywrap_tensorflow
 
 __version__ = pywrap_tensorflow.__version__
 GRAPH_DEF_VERSION = pywrap_tensorflow.GRAPH_DEF_VERSION
-GRAPH_DEF_VERSION_MIN_CONSUMER = (
-    pywrap_tensorflow.GRAPH_DEF_VERSION_MIN_CONSUMER)
-GRAPH_DEF_VERSION_MIN_PRODUCER = (
-    pywrap_tensorflow.GRAPH_DEF_VERSION_MIN_PRODUCER)
+GRAPH_DEF_VERSION_MIN = pywrap_tensorflow.GRAPH_DEF_VERSION_MIN
+GRAPH_DEF_VERSION_MAX = pywrap_tensorflow.GRAPH_DEF_VERSION_MAX
 
 # Make sure these symbols are exported even though one starts with _.
-__all__ = ["__version__", "GRAPH_DEF_VERSION", "GRAPH_DEF_VERSION_MIN_CONSUMER",
-           "GRAPH_DEF_VERSION_MIN_PRODUCER"]
+__all__ = ["__version__", "GRAPH_DEF_VERSION", "GRAPH_DEF_VERSION_MIN",
+           "GRAPH_DEF_VERSION_MAX"]

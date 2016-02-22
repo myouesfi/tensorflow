@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 
@@ -146,7 +147,7 @@ REGISTER_OP("ShardedFilename")
     .Input("num_shards: int32")
     .Output("filename: string")
     .Doc(R"doc(
-Generate a sharded filename. The filename is printf formatted as
+Generate a sharded filename. The filename is printf formated as
    %s-%05d-of-%05d, basename, shard, num_shards.
 )doc");
 

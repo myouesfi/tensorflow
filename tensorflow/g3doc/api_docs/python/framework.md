@@ -113,7 +113,7 @@ This method is thread-safe.
 
 ##### Returns:
 
-  A [`GraphDef`](https://www.tensorflow.org/code/tensorflow/core/framework/graph.proto)
+  A [`GraphDef`](https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/graph.proto)
   protocol buffer.
 
 ##### Raises:
@@ -570,7 +570,7 @@ Note that this is unrelated to the
 The GraphDef version of this graph.
 
 For details on the meaning of each version, see [`GraphDef`]
-(https://www.tensorflow.org/code/tensorflow/core/framework/graph.proto).
+(https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/graph.proto).
 
 
 
@@ -858,7 +858,7 @@ Returns a serialized `NodeDef` representation of this operation.
 ##### Returns:
 
   A
-  [`NodeDef`](https://www.tensorflow.org/code/tensorflow/core/framework/graph.proto)
+  [`NodeDef`](https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/graph.proto)
   protocol buffer.
 
 
@@ -871,7 +871,7 @@ Returns the `OpDef` proto that represents the type of this op.
 ##### Returns:
 
   An
-  [`OpDef`](https://www.tensorflow.org/code/tensorflow/core/framework/op_def.proto)
+  [`OpDef`](https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/op_def.proto)
   protocol buffer.
 
 
@@ -917,7 +917,7 @@ c = tf.constant([[1.0, 2.0], [3.0, 4.0]])
 d = tf.constant([[1.0, 1.0], [0.0, 1.0]])
 e = tf.matmul(c, d)
 
-# Construct a `Session` to execute the graph.
+# Construct a `Session` to execut the graph.
 sess = tf.Session()
 
 # Execute the graph and store the value that `e` represents in `result`.
@@ -1134,8 +1134,6 @@ The following `DType` objects are defined:
 
 * `tf.int8`: 8-bit signed integer.
 * `tf.uint8`: 8-bit unsigned integer.
-* `tf.uint16`: 16-bit unsigned integer.
-* `tf.int16`: 16-bit signed integer.
 * `tf.int32`: 32-bit signed integer.
 * `tf.int64`: 64-bit signed integer.
 
@@ -1318,7 +1316,7 @@ Converts the given `type_value` to a `DType`.
 
 *  <b>`type_value`</b>: A value that can be converted to a `tf.DType`
     object. This may currently be a `tf.DType` object, a
-    [`DataType` enum](https://www.tensorflow.org/code/tensorflow/core/framework/types.proto),
+    [`DataType` enum](https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/types.proto),
     a string type name, or a `numpy.dtype`.
 
 ##### Returns:
@@ -1341,7 +1339,7 @@ Converts the given `type_value` to a `DType`.
 Wrapper for `Graph.device()` using the default graph.
 
 See
-[`Graph.device()`](../../api_docs/python/framework.md#Graph.device)
+[`Graph.name_scope()`](../../api_docs/python/framework.md#Graph.name_scope)
 for more details.
 
 ##### Args:
@@ -1490,7 +1488,7 @@ The returned graph will be the innermost graph on which a
 `Graph.as_default()` context has been entered, or a global default
 graph if none has been explicitly created.
 
-NOTE: The default graph is a property of the current thread. If you
+*N.B.* The default graph is a property of the current thread. If you
 create a new thread, and wish to use the default graph in that
 thread, you must explicitly add a `with g.as_default():` in that
 thread's function.
@@ -1502,25 +1500,12 @@ thread's function.
 
 - - -
 
-### `tf.reset_default_graph()` {#reset_default_graph}
-
-Clears the default graph stack and resets the global default graph.
-
-NOTE: The default graph is a property of the current thread. This
-function applies only to the current thread.  Calling this function while
-a `tf.Session` or `tf.InteractiveSession` is active will result in undefined
-behavior. Using any previously created `tf.Operation` or `tf.Tensor` objects
-after calling this function will result in undefined behavior.
-
-
-- - -
-
 ### `tf.import_graph_def(graph_def, input_map=None, return_elements=None, name=None, op_dict=None)` {#import_graph_def}
 
 Imports the TensorFlow graph in `graph_def` into the Python `Graph`.
 
 This function provides a way to import a serialized TensorFlow
-[`GraphDef`](https://www.tensorflow.org/code/tensorflow/core/framework/graph.proto)
+[`GraphDef`](https://tensorflow.googlesource.com/tensorflow/+/master/tensorflow/core/framework/graph.proto)
 protocol buffer, and extract individual objects in the `GraphDef` as
 [`Tensor`](#Tensor) and [`Operation`](#Operation) objects. See
 [`Graph.as_graph_def()`](#Graph.as_graph_def) for a way to create a
@@ -1557,35 +1542,6 @@ protocol buffer, and extract individual objects in the `GraphDef` as
 *  <b>`ValueError`</b>: If `input_map`, or `return_elements` contains names that
     do not appear in `graph_def`, or `graph_def` is not well-formed (e.g.
     it refers to an unknown tensor).
-
-
-- - -
-
-### `tf.load_op_library(library_filename)` {#load_op_library}
-
-Loads a TensorFlow plugin, containing custom ops and kernels.
-
-Pass "library_filename" to a platform-specific mechanism for dynamically
-loading a library. The rules for determining the exact location of the
-library are platform-specific and are not documented here.
-Expects the symbols "RegisterOps", "RegisterKernels", and "GetOpList", to be
-defined in the library.
-
-##### Args:
-
-
-*  <b>`library_filename`</b>: Path to the plugin.
-    Relative or absolute filesystem path to a dynamic library file.
-
-##### Returns:
-
-  A python module containing the Python wrappers for Ops defined in
-  the plugin.
-
-##### Raises:
-
-
-*  <b>`RuntimeError`</b>: when unable to load the library or get the python wrappers.
 
 
 
@@ -1668,8 +1624,6 @@ The following standard keys are defined:
   keep moving averages.  See
   [`tf.moving_average_variables()`](../../api_docs/python/state_ops.md#moving_average_variables)
   for more details.
-* `REGULARIZATION_LOSSES`: regularization losses collected during graph
-  construction.
 
 
 ## Defining new operations
@@ -1863,17 +1817,6 @@ Returns a list of Dimensions, or None if the shape is unspecified.
 #### `tf.TensorShape.as_list()` {#TensorShape.as_list}
 
 Returns a list of integers or None for each dimension.
-
-##### Returns:
-
-  A list of integers or None for each dimension.
-
-
-- - -
-
-#### `tf.TensorShape.as_proto()` {#TensorShape.as_proto}
-
-Returns this shape as a `TensorShapeProto`.
 
 
 - - -
@@ -2083,6 +2026,13 @@ Creates a new TensorShape with the given dimensions.
 
 - - -
 
+#### `tf.TensorShape.as_dimension_list()` {#TensorShape.as_dimension_list}
+
+DEPRECATED: use `as_list()`.
+
+
+- - -
+
 #### `tf.TensorShape.num_elements()` {#TensorShape.num_elements}
 
 Returns the total number of elements, or none for incomplete shapes.
@@ -2239,49 +2189,5 @@ For details on how the graph-level seed interacts with op seeds, see
 
   A tuple of two integers that should be used for the local seed of this
   operation.
-
-
-
-## For libraries building on TensorFlow
-
-- - -
-
-### `tf.register_tensor_conversion_function(base_type, conversion_func, priority=100)` {#register_tensor_conversion_function}
-
-Registers a function for converting objects of `base_type` to `Tensor`.
-
-The conversion function must have the following signature:
-
-    def conversion_func(value, dtype=None, name=None, as_ref=False):
-      # ...
-
-It must return a `Tensor` with the given `dtype` if specified. If the
-conversion function creates a new `Tensor`, it should use the given
-`name` if specified. All exceptions will be propagated to the caller.
-
-If `as_ref` is true, the function must return a `Tensor` reference,
-such as a `Variable`.
-
-NOTE: The conversion functions will execute in order of priority,
-followed by order of registration. To ensure that a conversion function
-`F` runs before another conversion function `G`, ensure that `F` is
-registered with a smaller priority than `G`.
-
-##### Args:
-
-
-*  <b>`base_type`</b>: The base type or tuple of base types for all objects that
-    `conversion_func` accepts.
-*  <b>`conversion_func`</b>: A function that converts instances of `base_type` to
-    `Tensor`.
-*  <b>`priority`</b>: Optional integer that indicates the priority for applying this
-    conversion function. Conversion functions with smaller priority values
-    run earlier than conversion functions with larger priority values.
-    Defaults to 100.
-
-##### Raises:
-
-
-*  <b>`TypeError`</b>: If the arguments do not have the appropriate type.
 
 

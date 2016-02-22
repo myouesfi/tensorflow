@@ -62,7 +62,6 @@
               <template is="dom-repeat" items="[[item.tags]]">
                 <span class="tag layout vertical center-center">[[item]]</span>
               </template>
-            </div>
           </div>
         </template>
       </div>
@@ -90,4 +89,9 @@
 
   <x-demo id="demo"></x-demo>
  </body>
+ <script>
+  HTMLImports.whenReady(function() {
+    window.demo = document.getElementById("demo");
+  })
+ </script>
 </html>

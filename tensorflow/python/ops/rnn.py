@@ -20,8 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 from tensorflow.python.framework import ops
-from tensorflow.python.framework import tensor_shape
-from tensorflow.python.framework import tensor_util
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.ops import math_ops
@@ -36,10 +34,12 @@ def rnn(cell, inputs, initial_state=None, dtype=None,
   The simplest form of RNN network generated is:
     state = cell.zero_state(...)
     outputs = []
+    states = []
     for input_ in inputs:
       output, state = cell(input_, state)
       outputs.append(output)
-    return (outputs, state)
+      states.append(state)
+    return (outputs, states)
 
   However, a few other options are available:
 
@@ -65,9 +65,9 @@ def rnn(cell, inputs, initial_state=None, dtype=None,
     scope: VariableScope for the created subgraph; defaults to "RNN".
 
   Returns:
-    A pair (outputs, state) where:
+    A pair (outputs, states) where:
       outputs is a length T list of outputs (one for each input)
-      state is the final state
+      states is a length T list of states (one state following each input)
 
   Raises:
     TypeError: If "cell" is not an instance of RNNCell.
@@ -82,12 +82,9 @@ def rnn(cell, inputs, initial_state=None, dtype=None,
     raise ValueError("inputs must not be empty")
 
   outputs = []
+  states = []
   with vs.variable_scope(scope or "RNN"):
-    fixed_batch_size = inputs[0].get_shape().with_rank_at_least(1)[0]
-    if fixed_batch_size.value:
-      batch_size = fixed_batch_size.value
-    else:
-      batch_size = array_ops.shape(inputs[0])[0]
+    batch_size = array_ops.shape(inputs[0])[0]
     if initial_state is not None:
       state = initial_state
     else:
@@ -96,28 +93,30 @@ def rnn(cell, inputs, initial_state=None, dtype=None,
       state = cell.zero_state(batch_size, dtype)
 
     if sequence_length:  # Prepare variables
-      zero_output = array_ops.zeros(
-          array_ops.pack([batch_size, cell.output_size]), inputs[0].dtype)
-      zero_output.set_shape(
-          tensor_shape.TensorShape([fixed_batch_size.value, cell.output_size]))
-      min_sequence_length = math_ops.reduce_min(sequence_length)
+      zero_output_state = (
+          array_ops.zeros(array_ops.pack([batch_size, cell.output_size]),
+                          inputs[0].dtype),
+          array_ops.zeros(array_ops.pack([batch_size, cell.state_size]),
+                          state.dtype))
       max_sequence_length = math_ops.reduce_max(sequence_length)
 
     for time, input_ in enumerate(inputs):
       if time > 0: vs.get_variable_scope().reuse_variables()
       # pylint: disable=cell-var-from-loop
-      call_cell = lambda: cell(input_, state)
+      def output_state():
+        return cell(input_, state)
       # pylint: enable=cell-var-from-loop
       if sequence_length:
-        (output, state) = _dynamic_rnn_step(
-            time, sequence_length, min_sequence_length, max_sequence_length,
-            zero_output, state, call_cell)
+        (output, state) = control_flow_ops.cond(
+            time >= max_sequence_length,
+            lambda: zero_output_state, output_state)
       else:
-        (output, state) = call_cell()
+        (output, state) = output_state()
 
       outputs.append(output)
+      states.append(state)
 
-    return (outputs, state)
+    return (outputs, states)
 
 
 def state_saving_rnn(cell, inputs, state_saver, state_name,
@@ -135,88 +134,22 @@ def state_saving_rnn(cell, inputs, state_saver, state_name,
     scope: VariableScope for the created subgraph; defaults to "RNN".
 
   Returns:
-    A pair (outputs, state) where:
+    A pair (outputs, states) where:
       outputs is a length T list of outputs (one for each input)
-      states is the final state
+      states is a length T list of states (one state following each input)
 
   Raises:
     TypeError: If "cell" is not an instance of RNNCell.
     ValueError: If inputs is None or an empty list.
   """
   initial_state = state_saver.state(state_name)
-  (outputs, state) = rnn(cell, inputs, initial_state=initial_state,
-                         sequence_length=sequence_length, scope=scope)
-  save_state = state_saver.save_state(state_name, state)
+  (outputs, states) = rnn(cell, inputs, initial_state=initial_state,
+                          sequence_length=sequence_length, scope=scope)
+  save_state = state_saver.save_state(state_name, states[-1])
   with ops.control_dependencies([save_state]):
     outputs[-1] = array_ops.identity(outputs[-1])
 
-  return (outputs, state)
-
-
-def _dynamic_rnn_step(
-    time, sequence_length, min_sequence_length, max_sequence_length,
-    zero_output, state, call_cell):
-  """Calculate one step of a dynamic RNN minibatch.
-
-  Returns an (output, state) pair conditioned on the sequence_lengths.
-  The pseudocode is something like:
-
-  if t >= max_sequence_length:
-    return (zero_output, state)
-  if t < min_sequence_length:
-    return call_cell()
-
-  # Selectively output zeros or output, old state or new state depending
-  # on if we've finished calculating each row.
-  new_output, new_state = call_cell()
-  final_output = np.vstack([
-    zero_output if time >= sequence_lengths[r] else new_output_r
-    for r, new_output_r in enumerate(new_output)
-  ])
-  final_state = np.vstack([
-    state[r] if time >= sequence_lengths[r] else new_state_r
-    for r, new_state_r in enumerate(new_state)
-  ])
-  return (final_output, final_state)
-
-  Args:
-    time: Python int, the current time step
-    sequence_length: int32 `Tensor` vector of size [batch_size]
-    min_sequence_length: int32 `Tensor` scalar, min of sequence_length
-    max_sequence_length: int32 `Tensor` scalar, max of sequence_length
-    zero_output: `Tensor` vector of shape [output_size]
-    state: `Tensor` matrix of shape [batch_size, state_size]
-    call_cell: lambda returning tuple of (new_output, new_state) where
-      new_output is a `Tensor` matrix of shape [batch_size, output_size]
-      new_state is a `Tensor` matrix of shape [batch_size, state_size]
-
-  Returns:
-    A tuple of (final_output, final_state) as given by the pseudocode above:
-      final_output is a `Tensor` matrix of shape [batch_size, output_size]
-      final_state is a `Tensor` matrix of shape [batch_size, state_size]
-  """
-  # Step 1: determine whether we need to call_cell or not
-  empty_update = lambda: (zero_output, state)
-  state_shape = state.get_shape()
-  output, new_state = control_flow_ops.cond(
-      time < max_sequence_length, call_cell, empty_update)
-
-  # Step 2: determine whether we need to copy through state and/or outputs
-  existing_output_state = lambda: (output, new_state)
-
-  def copy_through():
-    # Use broadcasting select to determine which values should get
-    # the previous state & zero output, and which values should get
-    # a calculated state & output.
-    copy_cond = (time >= sequence_length)
-    return (math_ops.select(copy_cond, zero_output, output),
-            math_ops.select(copy_cond, state, new_state))
-
-  (output, state) = control_flow_ops.cond(
-      time < min_sequence_length, existing_output_state, copy_through)
-  output.set_shape(zero_output.get_shape())
-  state.set_shape(state_shape)
-  return (output, state)
+  return (outputs, states)
 
 
 def _reverse_seq(input_seq, lengths):
@@ -234,12 +167,8 @@ def _reverse_seq(input_seq, lengths):
   if lengths is None:
     return list(reversed(input_seq))
 
-  for input_ in input_seq:
-    input_.set_shape(input_.get_shape().with_rank(2))
-
   # Join into (time, batch_size, depth)
   s_joined = array_ops.pack(input_seq)
-
   # Reverse along dimension 0
   s_reversed = array_ops.reverse_sequence(s_joined, lengths, 0, 1)
   # Split again into list
@@ -298,13 +227,11 @@ def bidirectional_rnn(cell_fw, cell_bw, inputs,
   name = scope or "BiRNN"
   # Forward direction
   with vs.variable_scope(name + "_FW"):
-    output_fw, _ = rnn(cell_fw, inputs, initial_state_fw, dtype,
-                       sequence_length)
-
+    output_fw, _ = rnn(cell_fw, inputs, initial_state_fw, dtype)
   # Backward direction
   with vs.variable_scope(name + "_BW"):
-    tmp, _ = rnn(cell_bw, _reverse_seq(inputs, sequence_length),
-                 initial_state_bw, dtype, sequence_length)
+    tmp, _ = rnn(
+        cell_bw, _reverse_seq(inputs, sequence_length), initial_state_bw, dtype)
   output_bw = _reverse_seq(tmp, sequence_length)
   # Concat each of the forward/backward outputs
   outputs = [array_ops.concat(1, [fw, bw])

@@ -19,9 +19,8 @@ limitations under the License.
 
 #include "tensorflow/core/kernels/aggregate_ops.h"
 
-#include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/framework/tensor_types.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 
@@ -141,21 +140,16 @@ struct Add9Functor<GPUDevice, T> {
 
 }  // end namespace functor
 
-// Instantiate the GPU implementation for GPU number types.
-#define REGISTER_FUNCTORS(type)                           \
-  template struct functor::Add2Functor<GPUDevice, type>;  \
-  template struct functor::Add3Functor<GPUDevice, type>;  \
-  template struct functor::Add4Functor<GPUDevice, type>;  \
-  template struct functor::Add5Functor<GPUDevice, type>;  \
-  template struct functor::Add6Functor<GPUDevice, type>;  \
-  template struct functor::Add7Functor<GPUDevice, type>;  \
-  template struct functor::Add8Functor<GPUDevice, type>;  \
-  template struct functor::Add8pFunctor<GPUDevice, type>; \
-  template struct functor::Add9Functor<GPUDevice, type>;
-
-TF_CALL_GPU_NUMBER_TYPES(REGISTER_FUNCTORS);
-
-#undef REGISTER_FUNCTORS
+// Instantiate the GPU implementation for float.
+template struct functor::Add2Functor<GPUDevice, float>;
+template struct functor::Add3Functor<GPUDevice, float>;
+template struct functor::Add4Functor<GPUDevice, float>;
+template struct functor::Add5Functor<GPUDevice, float>;
+template struct functor::Add6Functor<GPUDevice, float>;
+template struct functor::Add7Functor<GPUDevice, float>;
+template struct functor::Add8Functor<GPUDevice, float>;
+template struct functor::Add8pFunctor<GPUDevice, float>;
+template struct functor::Add9Functor<GPUDevice, float>;
 
 }  // end namespace tensorflow
 

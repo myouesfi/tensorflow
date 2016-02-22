@@ -17,7 +17,21 @@
     </style>
   </head>
   <body>
-    <p>This demo is currently broken.</p>
+    <script>
+      TF.Urls.runsUrl = function() {
+        return "data/runs.json"
+      };
+      TF.Urls.imagesUrl = function(tag, run) {
+        return "data/images/" + run + "/" + tag + ".json";
+      };
+      TF.Urls.individualImageUrl = function(query) {
+        return "data/individualImage/" + query + ".png";
+      }
+    </script>
+
+    <p>The image dashboard is deliberately inside a small container
+    so that it's easy to test that the scroll bars display properly.</p>
+    <p>Looks goofy though.</p>
     <div id="container">
       <tf-image-dashboard id="demo"></tf-image-dashboard>
     </div>

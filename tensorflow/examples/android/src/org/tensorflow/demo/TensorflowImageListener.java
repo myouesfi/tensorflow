@@ -24,8 +24,6 @@ import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
 import android.media.ImageReader.OnImageAvailableListener;
-import android.os.Handler;
-import android.os.Trace;
 
 import junit.framework.Assert;
 
@@ -40,7 +38,7 @@ import java.util.List;
 public class TensorflowImageListener implements OnImageAvailableListener {
   private static final Logger LOGGER = new Logger();
 
-  private static final boolean SAVE_PREVIEW_BITMAP = false;
+  private static final boolean SAVE_PREVIEW_BITMAP = true;
 
   private static final String MODEL_FILE = "file:///android_asset/tensorflow_inception_graph.pb";
   private static final String LABEL_FILE =
@@ -61,20 +59,13 @@ public class TensorflowImageListener implements OnImageAvailableListener {
   private int[] rgbBytes = null;
   private Bitmap rgbFrameBitmap = null;
   private Bitmap croppedBitmap = null;
-  
-  private boolean computing = false;
-  private Handler handler;
-  
+
   private RecognitionScoreView scoreView;
 
-  public void initialize(
-      final AssetManager assetManager,
-      final RecognitionScoreView scoreView,
-      final Handler handler) {
+  public void initialize(final AssetManager assetManager, final RecognitionScoreView scoreView) {
     tensorflow.initializeTensorflow(
         assetManager, MODEL_FILE, LABEL_FILE, NUM_CLASSES, INPUT_SIZE, IMAGE_MEAN);
     this.scoreView = scoreView;
-    this.handler = handler;
   }
 
   private void drawResizedBitmap(final Bitmap src, final Bitmap dst) {
@@ -111,15 +102,6 @@ public class TensorflowImageListener implements OnImageAvailableListener {
       if (image == null) {
         return;
       }
-      
-      // No mutex needed as this method is not reentrant.
-      if (computing) {
-        image.close();
-        return;
-      }
-      computing = true;
-
-      Trace.beginSection("imageAvailable");
 
       final Plane[] planes = image.getPlanes();
 
@@ -164,7 +146,6 @@ public class TensorflowImageListener implements OnImageAvailableListener {
         image.close();
       }
       LOGGER.e(e, "Exception!");
-      Trace.endSection();
       return;
     }
 
@@ -176,21 +157,12 @@ public class TensorflowImageListener implements OnImageAvailableListener {
       ImageUtils.saveBitmap(croppedBitmap);
     }
 
-    handler.post(
-        new Runnable() {
-          @Override
-          public void run() {
-            final List<Classifier.Recognition> results = tensorflow.recognizeImage(croppedBitmap);
+    final List<Classifier.Recognition> results = tensorflow.recognizeImage(croppedBitmap);
 
-            LOGGER.v("%d results", results.size());
-            for (final Classifier.Recognition result : results) {
-              LOGGER.v("Result: " + result.getTitle());
-            }
-            scoreView.setResults(results);
-            computing = false;
-          }
-        });
-
-    Trace.endSection();
+    LOGGER.v("%d results", results.size());
+    for (final Classifier.Recognition result : results) {
+      LOGGER.v("Result: " + result.getTitle());
+    }
+    scoreView.setResults(results);
   }
 }

@@ -25,6 +25,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace tensorflow {
 namespace gtl {

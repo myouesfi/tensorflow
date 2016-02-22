@@ -180,7 +180,13 @@ class Variable(object):
     if collections is None:
       collections = [ops.GraphKeys.VARIABLES]
     if trainable and ops.GraphKeys.TRAINABLE_VARIABLES not in collections:
-      collections = list(collections) + [ops.GraphKeys.TRAINABLE_VARIABLES]
+      # pylint: disable=g-no-augmented-assignment
+      #
+      # Pylint wants us to write collections += [...TRAINABLE_VARIABLES] which
+      # is not the same (it modifies the list in place.)  Here, we only want to
+      # modify the value of the variable, not the list.
+      collections = collections + [ops.GraphKeys.TRAINABLE_VARIABLES]
+      # pylint: enable=g-no-augmented-assignment
     with ops.control_dependencies(None):
       with ops.op_scope([initial_value], name, "Variable") as name:
         self._initial_value = ops.convert_to_tensor(initial_value,
@@ -206,7 +212,8 @@ class Variable(object):
             self._initializer_op = state_ops.assign(
                 self._variable, self._initial_value).op
             self._snapshot = array_ops.identity(self._variable, name="read")
-    ops.add_to_collections(collections, self)
+    for key in collections:
+      ops.add_to_collection(key, self)
     self._save_slice_info = None
 
   def _as_graph_element(self):

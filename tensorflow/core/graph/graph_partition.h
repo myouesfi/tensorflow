@@ -19,7 +19,6 @@ limitations under the License.
 #include <functional>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/graph/costmodel.h"

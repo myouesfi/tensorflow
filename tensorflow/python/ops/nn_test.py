@@ -146,9 +146,9 @@ class SoftmaxTest(tf.test.TestCase):
     self.assertLess(err, eps)
 
 
-class Conv2DTransposeTest(tf.test.TestCase):
+class DeConv2DTest(tf.test.TestCase):
 
-  def testConv2DTransposeSingleStride(self):
+  def testDeConv2DSingleStride(self):
     with self.test_session():
       strides = [1, 1, 1, 1]
 
@@ -161,8 +161,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
 
       x = tf.constant(1.0, shape=x_shape, name="x", dtype=tf.float32)
       f = tf.constant(1.0, shape=f_shape, name="filter", dtype=tf.float32)
-      output = tf.nn.conv2d_transpose(x, f, y_shape, strides=strides,
-                                      padding="SAME")
+      output = tf.nn.deconv2d(x, f, y_shape, strides=strides, padding="SAME")
       value = output.eval()
 
       # We count the number of cells being added at the locations in the output.
@@ -184,7 +183,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
                 target += 2 * 3.0
               self.assertAllClose(target, value[n, h, w, k])
 
-  def testConv2DTransposeSame(self):
+  def testDeConv2DSame(self):
     with self.test_session():
       strides = [1, 2, 2, 1]
 
@@ -197,8 +196,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
 
       x = tf.constant(1.0, shape=x_shape, name="x", dtype=tf.float32)
       f = tf.constant(1.0, shape=f_shape, name="filter", dtype=tf.float32)
-      output = tf.nn.conv2d_transpose(x, f, y_shape, strides=strides,
-                                      padding="SAME")
+      output = tf.nn.deconv2d(x, f, y_shape, strides=strides, padding="SAME")
       value = output.eval()
 
       for n in xrange(x_shape[0]):
@@ -215,7 +213,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
                 target += 3.0
               self.assertAllClose(target, value[n, h, w, k])
 
-  def testConv2DTransposeValid(self):
+  def testDeConv2DValid(self):
     with self.test_session():
       strides = [1, 2, 2, 1]
 
@@ -228,8 +226,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
 
       x = tf.constant(1.0, shape=x_shape, name="x", dtype=tf.float32)
       f = tf.constant(1.0, shape=f_shape, name="filter", dtype=tf.float32)
-      output = tf.nn.conv2d_transpose(x, f, y_shape, strides=strides,
-                                      padding="VALID")
+      output = tf.nn.deconv2d(x, f, y_shape, strides=strides, padding="VALID")
       value = output.eval()
 
       cache_values = np.zeros(y_shape, dtype=np.float32)
@@ -272,8 +269,7 @@ class Conv2DTransposeTest(tf.test.TestCase):
     with self.test_session():
       x = tf.constant(x_val, name="x", dtype=tf.float32)
       f = tf.constant(f_val, name="f", dtype=tf.float32)
-      output = tf.nn.conv2d_transpose(x, f, y_shape, strides=strides,
-                                      padding="SAME")
+      output = tf.nn.deconv2d(x, f, y_shape, strides=strides, padding="SAME")
       err = tf.test.compute_gradient_error(
           [x, f], [x_shape, f_shape], output, y_shape)
     print("DeConv gradient err = %g " % err)

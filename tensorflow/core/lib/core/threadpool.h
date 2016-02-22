@@ -20,10 +20,8 @@ limitations under the License.
 #include <functional>
 #include <thread>
 #include <vector>
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/env.h"
 
 namespace tensorflow {
 namespace thread {

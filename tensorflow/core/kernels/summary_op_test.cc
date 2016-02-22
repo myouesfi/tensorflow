@@ -15,14 +15,15 @@ limitations under the License.
 
 #include <functional>
 #include <memory>
+#include <vector>
 
+#include <gtest/gtest.h>
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/framework/fake_input.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/framework/node_def_builder.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/summary.pb.h"
-#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.h"
 #include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow/core/kernels/ops_testutil.h"
@@ -30,10 +31,10 @@ limitations under the License.
 #include "tensorflow/core/lib/core/status_test_util.h"
 #include "tensorflow/core/lib/histogram/histogram.h"
 #include "tensorflow/core/lib/strings/strcat.h"
-#include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/protobuf.h"
-#include "tensorflow/core/platform/test.h"
+#include "tensorflow/core/public/env.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
 namespace {
@@ -49,11 +50,11 @@ class SummaryScalarOpTest : public OpsTestBase {
  protected:
   void MakeOp(DataType dt) {
     RequireDefaultOps();
-    TF_ASSERT_OK(NodeDefBuilder("myop", "ScalarSummary")
-                     .Input(FakeInput())
-                     .Input(FakeInput(dt))
-                     .Finalize(node_def()));
-    TF_ASSERT_OK(InitOp());
+    ASSERT_OK(NodeDefBuilder("myop", "ScalarSummary")
+                  .Input(FakeInput())
+                  .Input(FakeInput(dt))
+                  .Finalize(node_def()));
+    ASSERT_OK(InitOp());
   }
 };
 
@@ -63,7 +64,7 @@ TEST_F(SummaryScalarOpTest, SimpleFloat) {
   // Feed and run
   AddInputFromArray<string>(TensorShape({3}), {"tag1", "tag2", "tag3"});
   AddInputFromArray<float>(TensorShape({3}), {1.0, -0.73, 10000.0});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);
@@ -83,7 +84,7 @@ TEST_F(SummaryScalarOpTest, SimpleDouble) {
   // Feed and run
   AddInputFromArray<string>(TensorShape({3}), {"tag1", "tag2", "tag3"});
   AddInputFromArray<double>(TensorShape({3}), {1.0, -0.73, 10000.0});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);
@@ -137,11 +138,11 @@ TEST_F(SummaryScalarOpTest, Error_WrongDimsValues) {
 class SummaryHistoOpTest : public OpsTestBase {
  protected:
   void MakeOp(DataType dt) {
-    TF_ASSERT_OK(NodeDefBuilder("myop", "HistogramSummary")
-                     .Input(FakeInput())
-                     .Input(FakeInput(dt))
-                     .Finalize(node_def()));
-    TF_ASSERT_OK(InitOp());
+    ASSERT_OK(NodeDefBuilder("myop", "HistogramSummary")
+                  .Input(FakeInput())
+                  .Input(FakeInput(dt))
+                  .Finalize(node_def()));
+    ASSERT_OK(InitOp());
   }
 };
 
@@ -151,7 +152,7 @@ TEST_F(SummaryHistoOpTest, SimpleFloat) {
   // Feed and run
   AddInputFromArray<string>(TensorShape({}), {"taghisto"});
   AddInputFromArray<float>(TensorShape({3, 2}), {0.1, -0.7, 4.1, 4., 5., 4.});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);
@@ -179,7 +180,7 @@ TEST_F(SummaryHistoOpTest, SimpleDouble) {
   // Feed and run
   AddInputFromArray<string>(TensorShape({}), {"taghisto"});
   AddInputFromArray<double>(TensorShape({3, 2}), {0.1, -0.7, 4.1, 4., 5., 4.});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);
@@ -227,10 +228,10 @@ TEST_F(SummaryHistoOpTest, Error_TooManyTagValues) {
 class SummaryMergeOpTest : public OpsTestBase {
  protected:
   void MakeOp(int num_inputs) {
-    TF_ASSERT_OK(NodeDefBuilder("myop", "MergeSummary")
-                     .Input(FakeInput(num_inputs))
-                     .Finalize(node_def()));
-    TF_ASSERT_OK(InitOp());
+    ASSERT_OK(NodeDefBuilder("myop", "MergeSummary")
+                  .Input(FakeInput(num_inputs))
+                  .Finalize(node_def()));
+    ASSERT_OK(InitOp());
   }
 };
 
@@ -253,7 +254,7 @@ TEST_F(SummaryMergeOpTest, Simple) {
   AddInputFromArray<string>(
       TensorShape({3}),
       {s1.SerializeAsString(), s2.SerializeAsString(), s3.SerializeAsString()});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);
@@ -287,7 +288,7 @@ TEST_F(SummaryMergeOpTest, Simple_MultipleInputs) {
   AddInputFromArray<string>(TensorShape({}), {s1.SerializeAsString()});
   AddInputFromArray<string>(TensorShape({}), {s2.SerializeAsString()});
   AddInputFromArray<string>(TensorShape({}), {s3.SerializeAsString()});
-  TF_ASSERT_OK(RunOpKernel());
+  ASSERT_OK(RunOpKernel());
 
   // Check the output size.
   Tensor* out_tensor = GetOutput(0);

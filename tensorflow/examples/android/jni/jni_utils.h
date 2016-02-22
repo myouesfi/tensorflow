@@ -20,7 +20,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace google {
 namespace protobuf {

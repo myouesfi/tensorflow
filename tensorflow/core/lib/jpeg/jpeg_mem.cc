@@ -26,8 +26,7 @@ limitations under the License.
 
 #include "tensorflow/core/lib/jpeg/jpeg_handle.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/mem.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 namespace jpeg {
@@ -540,7 +539,7 @@ bool CompressInternal(const uint8* srcdata, int width, int height,
         row_pointer[0] = reinterpret_cast<JSAMPLE*>(const_cast<JSAMPLE*>(r));
       }
     }
-    CHECK_EQ(jpeg_write_scanlines(&cinfo, row_pointer, 1), 1u);
+    CHECK_EQ(jpeg_write_scanlines(&cinfo, row_pointer, 1), 1);
   }
   jpeg_finish_compress(&cinfo);
 

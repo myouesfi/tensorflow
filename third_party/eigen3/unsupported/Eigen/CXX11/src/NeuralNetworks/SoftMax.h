@@ -23,11 +23,10 @@ namespace Eigen {
 */
 
 namespace {
-class SoftmaxOp {
- public:
-  EIGEN_ALWAYS_INLINE SoftmaxOp(const float beta) : beta_(beta) { }
+struct SoftmaxOp {
+  SoftmaxOp(const float beta) : beta_(beta) { }
 
-  template <typename Input> EIGEN_ALWAYS_INLINE
+  template <typename Input>
   typename Input::Dimensions dimensions(const Input& input) const {
     return input.dimensions();
   }

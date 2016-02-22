@@ -20,7 +20,6 @@ limitations under the License.
 #include <stdio.h>
 
 #include <memory>
-#include <vector>
 
 #include "tensorflow/core/framework/bfloat16.h"
 #include "tensorflow/core/framework/register_types.h"

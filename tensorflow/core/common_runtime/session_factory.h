@@ -18,14 +18,14 @@ limitations under the License.
 
 #include <string>
 
-#include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/status.h"
 
 namespace tensorflow {
 
 class Session;
-struct SessionOptions;
+class SessionOptions;
 
 class SessionFactory {
  public:

@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "tensorflow/core/lib/strings/str_util.h"
 #include <ctype.h>
-#include <vector>
 
 namespace tensorflow {
 namespace str_util {
@@ -308,25 +307,6 @@ bool ConsumeLeadingDigits(StringPiece* s, uint64* val) {
     *val = v;
     return true;
   } else {
-    return false;
-  }
-}
-
-bool ConsumeNonWhitespace(StringPiece* s, StringPiece* val) {
-  const char* p = s->data();
-  const char* limit = p + s->size();
-  while (p < limit) {
-    const char c = *p;
-    if (isspace(c)) break;
-    p++;
-  }
-  const size_t n = p - s->data();
-  if (n > 0) {
-    val->set(s->data(), n);
-    s->remove_prefix(n);
-    return true;
-  } else {
-    val->clear();
     return false;
   }
 }

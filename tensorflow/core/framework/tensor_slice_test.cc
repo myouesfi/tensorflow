@@ -15,10 +15,10 @@ limitations under the License.
 
 #include "tensorflow/core/framework/tensor_slice.h"
 
+#include <gtest/gtest.h>
 #include "tensorflow/core/lib/core/status_test_util.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/protobuf.h"
-#include "tensorflow/core/platform/test.h"
 
 namespace tensorflow {
 namespace {
@@ -156,11 +156,16 @@ TEST(TensorSliceTest, SliceTensorShape) {
     TensorSlice a = TensorSlice::ParseOrDie("1,1:-:4,1:2,6");
     TensorShape x({2, 4, 5, 8});
     TensorShape y;
-    TF_EXPECT_OK(a.SliceTensorShape(x, &y));
-    EXPECT_EQ("[1,4,1,6]", y.DebugString());
+    EXPECT_OK(a.SliceTensorShape(x, &y));
+    EXPECT_EQ(
+        "dim { size: 1 } "
+        "dim { size: 4 } "
+        "dim { size: 1 } "
+        "dim { size: 6 }",
+        y.DebugString());
   }
 
-  // An invalid application -- dimension 2 is out of bounds
+  // An invalid application -- dimension 2 is out of bound
   {
     TensorSlice a = TensorSlice::ParseOrDie("1,1:1,4:-:-");
     TensorShape x({2, 4, 5, 8});
@@ -168,9 +173,13 @@ TEST(TensorSliceTest, SliceTensorShape) {
     EXPECT_EQ(
         "Internal: "
         "Extent in dimension 1 out of bounds: "
-        "shape = [2,4,5,8], slice = 1,1:1,4:-:-",
+        "shape = dim { size: 2 } "
+        "dim { size: 4 } "
+        "dim { size: 5 } "
+        "dim { size: 8 }, "
+        "slice = 1,1:1,4:-:-",
         a.SliceTensorShape(x, &y).ToString());
-    EXPECT_EQ("[]", y.DebugString());
+    EXPECT_EQ("", y.DebugString());
   }
 }
 

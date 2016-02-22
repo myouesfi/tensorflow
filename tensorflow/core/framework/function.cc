@@ -16,7 +16,6 @@ limitations under the License.
 #include "tensorflow/core/framework/function.h"
 
 #include <unordered_set>
-#include <vector>
 
 #include "tensorflow/core/framework/node_def_util.h"
 #include "tensorflow/core/framework/op.h"
@@ -26,61 +25,79 @@ limitations under the License.
 
 namespace tensorflow {
 
+REGISTER_OP("_Arg")
+    .Output("output: T")
+    .Attr("T: type")
+    .Attr("index: int >= 0")
+    .Doc(R"doc(
+A graph node which represents an argument to a function.
+
+output: The argument.
+index: This argument is the index-th argument of the function.
+)doc");
+
+REGISTER_OP("_Retval")
+    .Input("input: T")
+    .Attr("T: type")
+    .Attr("index: int >= 0")
+    .Doc(R"doc(
+A graph node which represents a return value of a function.
+
+input: The return value.
+index: This return value is the index-th return value of the function.
+)doc");
+
+REGISTER_OP("_ListToArray")
+    .Input("input: Tin")
+    .Output("output: N * T")
+    .Attr("Tin: list(type)")
+    .Attr("T: type")
+    .Attr("N: int >= 1")
+    .Doc(R"doc(
+Converts a list of tensors to an array of tensors.
+)doc");
+
+REGISTER_OP("_ArrayToList")
+    .Input("input: N * T")
+    .Output("output: out_types")
+    .Attr("T: type")
+    .Attr("N: int >= 1")
+    .Attr("out_types: list(type)")
+    .Doc(R"doc(
+Converts an array of tensors to a list of tensors.
+)doc");
+
 namespace {
 
 // Extracts the actual type from "attr_values" based on its definition
 // "arg_def".
-//
-// If "arg_def" is a N*T type, *is_type_list is set to false, and
-// *dtypes is set to be a vector of size N and each element is T.
-//
-// If "arg_def" is a list(type), *is_type_list is set to true, and
-// *dtypes is set to be a vector of types specified in attrs for
-// arg_def.
-//
-// Otherwise (arg_def is a simple type T), *is_type_list is set to
-// false, and *dtypes is set to a single element vector, whose only
-// element is T.
 Status ArgNumType(const InstantiateAttrValueMap& attrs,
-                  const OpDef::ArgDef& arg_def, bool* is_type_list,
-                  DataTypeVector* dtypes) {
-  dtypes->clear();
+                  const OpDef::ArgDef& arg_def, int* num, DataType* dtype) {
   if (!arg_def.type_list_attr().empty()) {
-    const AttrValue* v = gtl::FindOrNull(attrs, arg_def.type_list_attr());
-    if (v == nullptr) {
-      return errors::NotFound("type attr not found: ",
-                              arg_def.type_list_attr());
-    }
-    *is_type_list = true;
-    for (int i = 0; i < v->list().type_size(); ++i) {
-      dtypes->push_back(v->list().type(i));
-    }
-    return Status::OK();
+    return errors::Unimplemented("type_list is not supported.");
   }
 
-  *is_type_list = false;
-  int num = 1;
-  if (!arg_def.number_attr().empty()) {
+  if (arg_def.number_attr().empty()) {
+    *num = 1;
+  } else {
     const AttrValue* v = gtl::FindOrNull(attrs, arg_def.number_attr());
     if (v == nullptr) {
       return errors::NotFound("type attr not found: ", arg_def.type_attr());
     }
-    num = v->i();
+    *num = v->i();
   }
 
-  DataType dtype;
   if (arg_def.type() != DT_INVALID) {
-    dtype = arg_def.type();
+    *dtype = arg_def.type();
   } else if (arg_def.type_attr().empty()) {
-    dtype = DT_INVALID;
+    *dtype = DT_INVALID;
   } else {
     const AttrValue* v = gtl::FindOrNull(attrs, arg_def.type_attr());
     if (v == nullptr) {
       return errors::NotFound("type attr not found: ", arg_def.type_attr());
     }
-    dtype = v->type();
+    *dtype = v->type();
   }
-  dtypes->resize(num, dtype);
   return Status::OK();
 }
 
@@ -125,7 +142,7 @@ Status ValidateSignatureWithAttrs(const OpDef& sig,
 //
 // If is_func_arg is true, the name is a function's argument.  In
 // this case, the produced graph def has gdef.node[nid ... nid +
-// dtype.size()).
+// num).
 //
 // Otherwise, the name is a function body's node return value.  In
 // this case, the produced graph def has one node gdef.node[nid] and
@@ -137,52 +154,35 @@ struct NameInfoItem {
   bool is_func_arg;
   int nid;
   int idx;
-  bool is_type_list;
-  DataTypeVector dtypes;
+  int num;
+  DataType dtype;
 };
 typedef std::unordered_map<string, NameInfoItem> NameInfoIndex;
-
-Status AddArgName(NameInfoIndex* name_info, const string& arg,
-                  const NameInfoItem& item) {
-  if (!name_info->insert({arg, item}).second) {
-    return errors::InvalidArgument("Duplicated arg name.");
-  }
-  return Status::OK();
-}
 
 Status BuildInputArgIndex(const OpDef::ArgDef& arg_def,
                           const InstantiateAttrValueMap& attr_values,
                           NameInfoIndex* name_info,
                           InstantiationResult* result) {
-  bool is_type_list;
-  DataTypeVector dtypes;
-  TF_RETURN_IF_ERROR(ArgNumType(attr_values, arg_def, &is_type_list, &dtypes));
-  CHECK_GE(dtypes.size(), size_t{1});
+  int num;
+  DataType dtype;
+  TF_RETURN_IF_ERROR(ArgNumType(attr_values, arg_def, &num, &dtype));
+  CHECK_GE(num, 1);
   GraphDef* gdef = &result->gdef;
   int arg_index = gdef->node_size();
-  TF_RETURN_IF_ERROR(AddArgName(name_info, arg_def.name(),
-                                {true, arg_index, 0, is_type_list, dtypes}));
-  // Creates dtypes.size() nodes in the gdef.
-  for (size_t i = 0; i < dtypes.size(); ++i) {
-    TF_RETURN_IF_ERROR(AddArgName(name_info,
-                                  strings::StrCat(arg_def.name(), ":", i),
-                                  {true, arg_index, 0, false, {dtypes[i]}}));
+  if (!name_info->insert({arg_def.name(), {true, arg_index, 0, num, dtype}})
+           .second) {
+    return errors::InvalidArgument("Duplicated arg name.");
+  }
+  // Creates "num" nodes in the gdef.
+  for (int i = 0; i < num; ++i) {
     DCHECK_EQ(arg_index, gdef->node_size());
     NodeDef* gnode = gdef->add_node();
     gnode->set_name(Name(arg_index));
     gnode->set_op("_Arg");
-    AddAttr("T", dtypes[i], gnode);
+    AddAttr("T", dtype, gnode);
     AddAttr("index", arg_index, gnode);
-    result->arg_types.push_back(dtypes[i]);
+    result->arg_types.push_back(dtype);
     ++arg_index;
-  }
-  return Status::OK();
-}
-
-Status AddRetName(NameInfoIndex* name_info, const string& ret,
-                  const NameInfoItem& item) {
-  if (!name_info->insert({ret, item}).second) {
-    return errors::InvalidArgument("Duplicated ret name.");
   }
   return Status::OK();
 }
@@ -198,28 +198,60 @@ Status BuildNodeOutputIndex(const FunctionDef::Node& node,
     if (node.ret_size() != 1) {
       return errors::InvalidArgument("Expect one ret name.");
     }
-    return AddRetName(name_info, node.ret(0), {false, arg_index, 0, false, {}});
+    if (!name_info->insert({node.ret(0), {false, arg_index, 0, 0, DT_INVALID}})
+             .second) {
+      return errors::InvalidArgument("Duplicated ret name.");
+    }
+    return Status::OK();
   }
+
+  // When the signature says the last return value is of list(type),
+  // i.e., it's variadic, we need to consult
+  // attrs[last_retval.type_list_attr] to determine for the last arg
+  //   * the actual number of outputs;
+  //   * the actual data type of outputs.
   const int num_retval = node_sig->output_arg_size();
-  if (num_retval != node.ret_size()) {
-    return errors::InvalidArgument("Malformed function node (#ret): ",
-                                   num_retval, " vs. ", node.ret_size());
+  const OpDef::ArgDef& last_retval = node_sig->output_arg(num_retval - 1);
+  const bool last_retval_is_typelist = !last_retval.type_list_attr().empty();
+  if (!last_retval_is_typelist && (node.ret_size() != num_retval)) {
+    return errors::InvalidArgument("Malformed function node (#ret).");
   }
   int start = 0;
-  bool is_type_list;
-  DataTypeVector dtypes;
-  for (int i = 0; i < num_retval; ++i) {
+  const int num_fixed_size_retval =
+      last_retval_is_typelist ? num_retval - 1 : num_retval;
+  for (int i = 0; i < num_fixed_size_retval; ++i) {
+    int num;
+    DataType dtype;
     TF_RETURN_IF_ERROR(
-        ArgNumType(attrs, node_sig->output_arg(i), &is_type_list, &dtypes));
-    TF_RETURN_IF_ERROR(
-        AddRetName(name_info, node.ret(i),
-                   {false, arg_index, start, is_type_list, dtypes}));
-    for (int j = 0; j < static_cast<int>(dtypes.size()); ++j) {
-      TF_RETURN_IF_ERROR(
-          AddRetName(name_info, strings::StrCat(node.ret(i), ":", j),
-                     {false, arg_index, start + j, false, {dtypes[j]}}));
+        ArgNumType(attrs, node_sig->output_arg(i), &num, &dtype));
+    if (!name_info->insert({node.ret(i), {false, arg_index, start, num, dtype}})
+             .second) {
+      return errors::InvalidArgument("Duplicated ret name.");
     }
-    start += dtypes.size();
+    start += num;
+  }
+  if (last_retval_is_typelist) {
+    const AttrValue* typelist =
+        gtl::FindOrNull(attrs, last_retval.type_list_attr());
+    if (typelist == nullptr) {
+      return errors::InvalidArgument("Missing attr ",
+                                     last_retval.type_list_attr(), ".");
+    }
+    if (num_fixed_size_retval + typelist->list().type_size() !=
+        node.ret_size()) {
+      return errors::InvalidArgument("Wrong #ret: ", num_fixed_size_retval, " ",
+                                     typelist->list().type_size(), " ",
+                                     node.ret_size(), ".");
+    }
+    for (int i = 0; i < typelist->list().type_size(); ++i) {
+      if (!name_info->insert({node.ret(i),
+                              {false, arg_index, start, 1,
+                               typelist->list().type(i)}})
+               .second) {
+        return errors::InvalidArgument("Duplicated ret name.");
+      }
+      ++start;
+    }
   }
   return Status::OK();
 }
@@ -235,57 +267,67 @@ Status InstantiateNode(const FunctionDef::Node& fnode,
   gnode->set_op(fnode.op());
 
   // Input
-  const int num_args = fnode_sig->input_arg_size();
-  bool is_type_list;
-  DataTypeVector dtypes;
-  int fnode_arg_index = 0;
-  for (int i = 0; i < num_args; ++i) {
+  //
+  // When the signature says the last argument is of list(type),
+  // i.e., it's variadic, we need to consult
+  // attrs[last_arg.type_list_attr] to determine for the last arg
+  //   * the number of arguments;
+  //   * the data types of arguments.
+  const int num_arg = fnode_sig->input_arg_size();
+  bool last_arg_is_typelist = false;
+  if (num_arg > 0 &&
+      !fnode_sig->input_arg(num_arg - 1).type_list_attr().empty()) {
+    last_arg_is_typelist = true;
+  }
+  if (!last_arg_is_typelist && (fnode.arg_size() != num_arg)) {
+    return errors::InvalidArgument("arg.size != sig.arg.size.");
+  }
+  const int num_fixed_size_args = last_arg_is_typelist ? num_arg - 1 : num_arg;
+  for (int i = 0; i < num_fixed_size_args; ++i) {
+    int num;
+    DataType dtype;
     TF_RETURN_IF_ERROR(
-        ArgNumType(attrs, fnode_sig->input_arg(i), &is_type_list, &dtypes));
-    if (!is_type_list) {
-      const NameInfoItem* item =
-          gtl::FindOrNull(name_info, fnode.arg(fnode_arg_index));
+        ArgNumType(attrs, fnode_sig->input_arg(i), &num, &dtype));
+    const NameInfoItem* item = gtl::FindOrNull(name_info, fnode.arg(i));
+    if (item == nullptr) {
+      return errors::InvalidArgument("arg[", i, "] is not found: ",
+                                     fnode.ShortDebugString());
+    }
+    if (num != item->num || dtype != item->dtype) {
+      return errors::InvalidArgument("Invalid arg(", i, ") for function arg: ",
+                                     " ", num, "/", dtype, " vs. ", item->num,
+                                     "/", item->dtype, ".");
+    }
+    for (int j = 0; j < num; ++j) {
+      if (item->is_func_arg) {
+        gnode->add_input(Name(item->nid + j));
+      } else {
+        gnode->add_input(Name(item->nid, item->idx + j));
+      }
+    }
+  }
+  if (last_arg_is_typelist) {
+    AttrValue typelist;
+    for (int i = num_fixed_size_args; i < fnode.arg_size(); ++i) {
+      const NameInfoItem* item = gtl::FindOrNull(name_info, fnode.arg(i));
       if (item == nullptr) {
-        return errors::InvalidArgument("arg[", i, "] is not found: ",
-                                       fnode.ShortDebugString());
+        return errors::InvalidArgument("arg[", i, "] is not found.");
       }
-      if (dtypes != item->dtypes) {
-        return errors::InvalidArgument("Invalid arg(", i,
-                                       ") for function arg: ", " ",
-                                       DataTypeSliceString(dtypes), " vs. ",
-                                       DataTypeSliceString(item->dtypes), ".");
-      }
-      for (size_t j = 0; j < dtypes.size(); ++j) {
+      for (int j = 0; j < item->num; ++j) {
         if (item->is_func_arg) {
           gnode->add_input(Name(item->nid + j));
         } else {
           gnode->add_input(Name(item->nid, item->idx + j));
         }
+        typelist.mutable_list()->add_type(item->dtype);
       }
-      ++fnode_arg_index;
-    } else {
-      for (size_t j = 0; j < dtypes.size(); ++j) {
-        const NameInfoItem* item =
-            gtl::FindOrNull(name_info, fnode.arg(fnode_arg_index + j));
-        if (item == nullptr) {
-          return errors::InvalidArgument("arg[", i + j, "] is not found: ",
-                                         fnode.ShortDebugString());
-        }
-        if (item->dtypes.size() != 1 || (item->dtypes[0] != dtypes[j])) {
-          return errors::InvalidArgument(
-              "Invalid typelist arg(", i + j, ") for function arg: ", " ",
-              DataTypeSliceString(dtypes), " vs. ",
-              DataTypeSliceString(item->dtypes), ".");
-        }
-        if (item->is_func_arg) {
-          gnode->add_input(Name(item->nid));
-        } else {
-          gnode->add_input(Name(item->nid, item->idx));
-        }
-      }
-      fnode_arg_index += dtypes.size();
     }
+
+    // 'typelist' is inferred from the inputs' data types.
+    const auto& last_arg = fnode_sig->input_arg(num_arg - 1);
+    gnode->mutable_attr()->insert({last_arg.type_list_attr(), typelist});
   }
+
   // Control deps.
   for (int i = 0; i < fnode.dep_size(); ++i) {
     const NameInfoItem* item = gtl::FindOrNull(name_info, fnode.dep(i));
@@ -309,28 +351,26 @@ Status AddReturnNode(const OpDef::ArgDef& ret_def,
                      const InstantiateAttrValueMap& attrs,
                      const NameInfoIndex& name_info, int* ret_index,
                      InstantiationResult* result) {
-  bool is_type_list;
-  DataTypeVector dtypes;
-  TF_RETURN_IF_ERROR(ArgNumType(attrs, ret_def, &is_type_list, &dtypes));
-  CHECK_GE(dtypes.size(), size_t{1});
+  int num;
+  DataType dtype;
+  TF_RETURN_IF_ERROR(ArgNumType(attrs, ret_def, &num, &dtype));
+  CHECK_GE(num, 1);
   const NameInfoItem* item = gtl::FindOrNull(name_info, ret_def.name());
   if (item == nullptr) {
     return errors::InvalidArgument("ret is not found.");
   }
-  if (dtypes != item->dtypes) {
-    return errors::InvalidArgument("Invalid ret types ", ret_def.name(), " : ",
-                                   DataTypeVectorString(dtypes), " vs. ",
-                                   DataTypeVectorString(item->dtypes));
+  if (num != item->num || dtype != item->dtype) {
+    return errors::InvalidArgument("Invalid ret name.");
   }
   GraphDef* gdef = &result->gdef;
-  for (size_t i = 0; i < dtypes.size(); ++i) {
+  for (int i = 0; i < num; ++i) {
     NodeDef* gnode = gdef->add_node();
     gnode->set_name(Name(gdef->node_size() - 1));
     gnode->set_op("_Retval");
     gnode->add_input(Name(item->nid, item->idx + i));
-    AddAttr("T", dtypes[i], gnode);
+    AddAttr("T", dtype, gnode);
     AddAttr("index", (*ret_index)++, gnode);
-    result->ret_types.push_back(dtypes[i]);
+    result->ret_types.push_back(dtype);
   }
   return Status::OK();
 }

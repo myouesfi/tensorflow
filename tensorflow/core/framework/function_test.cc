@@ -14,7 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/core/framework/function.h"
-#include <vector>
+#include <gtest/gtest.h>
 #include "tensorflow/core/framework/function.pb.h"
 #include "tensorflow/core/framework/function_testlib.h"
 #include "tensorflow/core/framework/graph.pb.h"
@@ -25,8 +25,7 @@ limitations under the License.
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/strings/str_util.h"
 #include "tensorflow/core/lib/strings/strcat.h"
-#include "tensorflow/core/platform/test.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 
@@ -237,30 +236,25 @@ TEST(TFunc, Body_TypeList) {
       // Nodes
       {{{"zero"}, "Const", {}, {{"value", kZero}, {"dtype", DT_INT32}}},
        {{"s"}, "Split", {"zero", "i"}, {{"num_split", 4}, {"T", DT_FLOAT}}},
-       {{"lst"},
+       {{"a", "b", "c", "d"},
         "_ArrayToList",
         {"s"},
         {{"N", 4},
          {"T", DT_FLOAT},
          {"out_types", DataTypeSlice{DT_FLOAT, DT_FLOAT, DT_FLOAT, DT_FLOAT}}}},
-       {{"l"}, "Mul", {"lst:0", "lst:1"}, {{"T", DT_FLOAT}}},
-       {{"r"}, "Mul", {"lst:2", "lst:3"}, {{"T", DT_FLOAT}}},
-       {{"x"},
-        "_ListToArray",
-        {"l", "r"},
-        {{"N", 2},
-         {"T", DT_FLOAT},
-         {"Tin", DataTypeSlice{DT_FLOAT, DT_FLOAT}}}},
+       {{"l"}, "Mul", {"a", "b"}, {{"T", DT_FLOAT}}},
+       {{"r"}, "Mul", {"c", "d"}, {{"T", DT_FLOAT}}},
+       {{"x"}, "_ListToArray", {"l", "r"}, {{"N", 2}, {"T", DT_FLOAT}}},
        {{"o"}, "AddN", {"x"}, {{"N", 2}, {"T", DT_FLOAT}}}});
 
   const char* e = R"P(
 Test(i:float) -> (o:float) {
   zero = Const[dtype=int32, value=Tensor<type: int32 shape: [] values: 0>]()
   s = Split[T=float, num_split=4](zero, i)
-  lst = _ArrayToList[N=4, T=float, out_types={float, float, float, float}](s)
-  l = Mul[T=float](lst:0, lst:1)
-  r = Mul[T=float](lst:2, lst:3)
-  x = _ListToArray[N=2, T=float, Tin={float, float}](l, r)
+  a, b, c, d = _ArrayToList[N=4, T=float, out_types={float, float, float, float}](s)
+  l = Mul[T=float](a, b)
+  r = Mul[T=float](c, d)
+  x = _ListToArray[N=2, T=float](l, r)
   o = AddN[N=2, T=float](x)
 }
 )P";
@@ -296,8 +290,8 @@ REGISTER_OP("Cond")
 output = Cond(input) ? then_branch(input) : else_branch(input)
 
 cond: A function takes 'input' and returns a scalar.
-then_branch: A function takes 'input' and returns 'output'.
-else_branch: A function takes 'input' and returns 'output'.
+then_branch: A funcion takes 'input' and returns 'output'.
+else_branch: A funcion takes 'input' and returns 'output'.
 )doc");
 
 TEST(TFunc, Body_Array_List_Converter) {
@@ -478,7 +472,7 @@ TEST(InstantiateErrors, FuncRet_Mismatch) {
                           });
   InstantiationResult result;
   HasError(InstantiateFunction(fdef, kNoAttrs, GetOpSig, &result),
-           "Invalid ret types y : float vs. double\n\t In y");
+           "Invalid ret name.\n\t In y");
 }
 
 TEST(InstantiateErrors, TypeList_Missing_Retval_Attr) {
@@ -503,7 +497,7 @@ TEST(InstantiateErrors, TypeList_Missing_Retval_Attr) {
       });
   InstantiationResult result;
   HasError(InstantiateFunction(fdef, kNoAttrs, GetOpSig, &result),
-           "type attr not found: out_types");
+           "Missing attr out_types");
 }
 
 TEST(InstantiateErrors, TypeList_Num_Retval_Mismatch) {
@@ -529,7 +523,7 @@ TEST(InstantiateErrors, TypeList_Num_Retval_Mismatch) {
       });
   InstantiationResult result;
   HasError(InstantiateFunction(fdef, kNoAttrs, GetOpSig, &result),
-           "Invalid ret types");
+           "Wrong #ret: 0 2 1");
 }
 
 TEST(InstantiateErrors, TypeList_Missing_Arg) {
@@ -547,8 +541,7 @@ TEST(InstantiateErrors, TypeList_Missing_Arg) {
           {{"y"},
            "Cond",
            {"x", "unknown"},
-           {{"Tin", DataTypeSlice{DT_FLOAT, DT_FLOAT}},
-            {"out_types", DataTypeSlice{DT_FLOAT}},
+           {{"out_types", DataTypeSlice{DT_FLOAT}},
             {"cond", FDH::FunctionRef("MyCond2")},
             {"then_branch", FDH::FunctionRef("MyThen2")},
             {"else_branch", FDH::FunctionRef("MyElse2")}}},
@@ -560,14 +553,14 @@ TEST(InstantiateErrors, TypeList_Missing_Arg) {
 
 TEST(FunctionCallFrame, Void_Void) {
   FunctionCallFrame frame({}, {});
-  TF_EXPECT_OK(frame.SetArgs({}));
+  EXPECT_OK(frame.SetArgs({}));
   auto a = test::AsTensor<float>({100});
   HasError(frame.SetArgs({a}), "Invalid argument");
   Tensor v;
   HasError(frame.GetArg(0, &v), "Out of range");
   HasError(frame.SetRetval(0, v), "Out of range");
   std::vector<Tensor> rets;
-  TF_EXPECT_OK(frame.GetRetvals(&rets));
+  EXPECT_OK(frame.GetRetvals(&rets));
   EXPECT_EQ(rets.size(), 0);
 }
 
@@ -579,14 +572,14 @@ TEST(FunctionCallFrame, Float_Float_Float) {
   auto c = test::AsTensor<int64>({300});
   HasError(frame.SetArgs({a, c}),
            "Invalid argument: Expects arg[1] to be float");
-  TF_EXPECT_OK(frame.SetArgs({a, b}));
+  EXPECT_OK(frame.SetArgs({a, b}));
 
   Tensor v;
   HasError(frame.GetArg(-1, &v), "Out of range");
   HasError(frame.GetArg(2, &v), "Out of range");
-  TF_EXPECT_OK(frame.GetArg(0, &v));
+  EXPECT_OK(frame.GetArg(0, &v));
   test::ExpectTensorEqual<float>(a, v);
-  TF_EXPECT_OK(frame.GetArg(1, &v));
+  EXPECT_OK(frame.GetArg(1, &v));
   test::ExpectTensorEqual<float>(b, v);
 
   v = test::AsTensor<float>({-100});
@@ -597,10 +590,10 @@ TEST(FunctionCallFrame, Float_Float_Float) {
 
   std::vector<Tensor> rets;
   HasError(frame.GetRetvals(&rets), "does not have value");
-  TF_EXPECT_OK(frame.SetRetval(0, v));
+  EXPECT_OK(frame.SetRetval(0, v));
   HasError(frame.SetRetval(0, v), "has already been set");
 
-  TF_EXPECT_OK(frame.GetRetvals(&rets));
+  EXPECT_OK(frame.GetRetvals(&rets));
   EXPECT_EQ(rets.size(), 1);
   test::ExpectTensorEqual<float>(rets[0], v);
 }

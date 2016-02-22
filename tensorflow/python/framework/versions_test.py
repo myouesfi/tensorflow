@@ -32,13 +32,13 @@ class VersionTest(tf.test.TestCase):
 
   def testGraphDefVersion(self):
     version = tf.GRAPH_DEF_VERSION
-    min_consumer = tf.GRAPH_DEF_VERSION_MIN_CONSUMER
-    min_producer = tf.GRAPH_DEF_VERSION_MIN_PRODUCER
-    for v in version, min_consumer, min_producer:
+    min = tf.GRAPH_DEF_VERSION_MIN
+    max = tf.GRAPH_DEF_VERSION_MAX
+    for v in version, min, max:
       self.assertEqual(type(v), int)
-    self.assertLessEqual(0, min_consumer)
-    self.assertLessEqual(0, min_producer)
-    self.assertLessEqual(min_producer, version)
+    self.assertLessEqual(0, min)
+    self.assertLessEqual(min, version)
+    self.assertLessEqual(version, max)
 
 
 if __name__ == "__main__":

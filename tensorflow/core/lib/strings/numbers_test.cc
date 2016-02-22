@@ -16,7 +16,7 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/numbers.h"
 
 #include <string>
-#include "tensorflow/core/platform/test.h"
+#include <gtest/gtest.h>
 
 namespace tensorflow {
 namespace strings {

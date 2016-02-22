@@ -14,7 +14,6 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/platform/macros.h"
 
 #if defined(PLATFORM_POSIX_ANDROID)
 #include <android/log.h>

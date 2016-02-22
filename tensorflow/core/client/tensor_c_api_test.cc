@@ -15,9 +15,8 @@ limitations under the License.
 
 #include "tensorflow/core/public/tensor_c_api.h"
 
-#include <vector>
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/platform/test.h"
+#include <gtest/gtest.h>
+#include "tensorflow/core/public/tensor.h"
 
 using tensorflow::Tensor;
 using tensorflow::TensorShape;

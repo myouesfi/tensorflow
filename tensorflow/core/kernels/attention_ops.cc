@@ -17,15 +17,14 @@ limitations under the License.
 
 #define EIGEN_USE_THREADS
 
-#include <vector>
+#include "tensorflow/core/platform/port.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/NeuralNetworks"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/framework/types.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/public/tensor.h"
+#include "tensorflow/core/public/tensor_shape.h"
 
 namespace tensorflow {
 
@@ -47,7 +46,7 @@ class ExtractGlimpseOp : public OpKernel {
         context, num_dims == 4,
         errors::InvalidArgument(
             "input must be 4-dimensional (batch_size, height, width, depth)",
-            input_shape.DebugString()));
+            input_shape.ShortDebugString()));
 
     const int64 batch_size = input_shape.dim_size(0);
 
@@ -56,7 +55,7 @@ class ExtractGlimpseOp : public OpKernel {
                              window_size.shape().dim_size(0) == 2,
                 errors::InvalidArgument(
                     "input must be a vector of size 2 (height, width)",
-                    window_size.shape().DebugString()));
+                    window_size.shape().ShortDebugString()));
 
     const int64 output_height = window_size.tensor<int, 1>()(0);
     const int64 output_width = window_size.tensor<int, 1>()(1);
@@ -67,14 +66,14 @@ class ExtractGlimpseOp : public OpKernel {
     const Tensor& offsets = context->input(2);
     OP_REQUIRES(context, offsets.shape().dims() == 2,
                 errors::InvalidArgument("input must be a matrix",
-                                        offsets.shape().DebugString()));
+                                        offsets.shape().ShortDebugString()));
     OP_REQUIRES(context, offsets.shape().dim_size(0) == batch_size,
                 errors::InvalidArgument("first dimension should be batch",
-                                        offsets.shape().DebugString()));
+                                        offsets.shape().ShortDebugString()));
     OP_REQUIRES(
         context, offsets.shape().dim_size(1) == 2,
         errors::InvalidArgument("second dimension should be of size 2 (y,x)",
-                                offsets.shape().DebugString()));
+                                offsets.shape().ShortDebugString()));
 
     Tensor* output = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));

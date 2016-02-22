@@ -43,15 +43,13 @@ limitations under the License.
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/framework/versions.pb.h"
 #include "tensorflow/core/graph/edgeset.h"
 #include "tensorflow/core/lib/core/arena.h"
 #include "tensorflow/core/lib/core/refcount.h"
-#include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/gtl/iterator_range.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/status.h"
 
 namespace tensorflow {
 
@@ -229,14 +227,16 @@ class Graph {
   // single SINK (always id kSinkId) node, and an edge from SOURCE->SINK.
   //
   // The graph can hold ops found in registry.
+  //
+  // The version defaults to TF_GRAPH_DEF_VERSION.
   explicit Graph(const OpRegistryInterface* registry);
   ~Graph();
 
   static const int kControlSlot = -1;
 
-  // The GraphDef version range of this graph (see graph.proto).
-  const VersionDef& versions() const { return versions_; }
-  void set_versions(const VersionDef& versions) { versions_ = versions; }
+  // The GraphDef version of this graph (see graph.proto).
+  int version() const { return version_; }
+  void set_version(int version) { version_ = version; }
 
   // Adds a new node to this graph, and returns it. Infers the Op and
   // input/output types for the node. *this owns the returned instance.
@@ -267,21 +267,8 @@ class Graph {
   // REQUIRES: The edge must exist.
   void RemoveEdge(const Edge* edge);
 
-  // The number of live nodes in the graph.
-  //
-  // Because nodes can be removed from the graph, num_nodes() is often
-  // smaller than num_node_ids(). If one needs to create an array of
-  // nodes indexed by node ids, num_node_ids() should be used as the
-  // array's size.
-  int num_nodes() const { return num_nodes_; }
-
-  // The number of live edges in the graph.
-  //
-  // Because edges can be removed from the graph, num_edges() is often
-  // smaller than num_edge_ids(). If one needs to create an array of
-  // edges indexed by edge ids, num_edge_ids() should be used as the
-  // array's size.
-  int num_edges() const { return edges().size(); }
+  // Returns one more than the maximum id assigned to any node.
+  int num_node_ids() const { return nodes_.size(); }
 
   // Serialize to a GraphDef.
   void ToGraphDef(GraphDef* graph_def) const;
@@ -293,9 +280,6 @@ class Graph {
   // Access to the list of all nodes.  Example usage:
   //   for (Node* node : graph.nodes()) { ... }
   gtl::iterator_range<NodeIter> nodes() const;
-
-  // Returns one more than the maximum id assigned to any node.
-  int num_node_ids() const { return nodes_.size(); }
 
   // Returns the node associated with an id, or nullptr if no node
   // with that id (the node with that id was removed and the id has
@@ -336,8 +320,8 @@ class Graph {
   // Registry of all known ops.  Not owned.
   const OpRegistryInterface* const ops_;
 
-  // GraphDef versions
-  VersionDef versions_;
+  // GraphDef version
+  int version_;
 
   // Allocator which will give us good locality.
   core::Arena arena_;
@@ -345,9 +329,6 @@ class Graph {
   // Map from node ids to allocated nodes.  nodes_[id] may be nullptr if
   // the node with that id was removed from the graph.
   std::vector<Node*> nodes_;
-
-  // Number of nodes alive.
-  int64 num_nodes_ = 0;
 
   // Map from edge ids to allocated edges.  edges_[id] may be nullptr if
   // the edge with that id was removed from the graph.

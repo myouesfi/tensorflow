@@ -21,13 +21,14 @@ from __future__ import print_function
 
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.ops import gen_nn_ops
 
 
 @ops.RegisterGradient("Conv2DBackpropInput")
-def _Conv2DBackpropGrad(op, grad):
+def _DeConv2DGrad(op, grad):
   """The derivatives for deconvolution.
 
   Args:
@@ -103,9 +104,27 @@ def _BiasAddGrad(unused_bias_op, received_grad):
   return (received_grad, math_ops.reduce_sum(received_grad, reduction_dim_tensor))
 
 
+def _VerifyTensor(t, name, msg):
+  """Assert that the tensor does not contain any NaN's.
+
+  Args:
+    t: Tensor
+    name: name
+    msg: message to log
+  Returns:
+    Tensor, but verified
+  """
+  with ops.name_scope(name):
+    with ops.device(t.device or ops.get_default_graph().get_default_device()):
+      verify_input = array_ops.check_numerics(t, message=msg)
+      out = control_flow_ops.with_dependencies([verify_input], t)
+  return out
+
+
 @ops.RegisterGradient("Relu")
 def _ReluGrad(op, grad):
-  return gen_nn_ops._relu_grad(grad, op.outputs[0])
+  t = _VerifyTensor(op.inputs[0], op.name, "ReluGrad input is not finite.")
+  return gen_nn_ops._relu_grad(grad, t)
 
 
 @ops.RegisterGradient("Relu6")
@@ -152,14 +171,6 @@ def _BroadcastMul(vec, mat):
 
 @ops.RegisterGradient("SoftmaxCrossEntropyWithLogits")
 def _SoftmaxCrossEntropyWithLogitsGrad(op, grad_0, _):
-  # grad_0 is the backprop for cost, and we multiply it with the gradients
-  # (which is output[1])
-  # There is no gradient for the labels
-  return _BroadcastMul(grad_0, op.outputs[1]), None
-
-
-@ops.RegisterGradient("SparseSoftmaxCrossEntropyWithLogits")
-def _SparseSoftmaxCrossEntropyWithLogitsGrad(op, grad_0, _):
   # grad_0 is the backprop for cost, and we multiply it with the gradients
   # (which is output[1])
   # There is no gradient for the labels

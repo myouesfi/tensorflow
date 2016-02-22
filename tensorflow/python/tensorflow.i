@@ -19,7 +19,6 @@ limitations under the License.
 
 %include "tensorflow/python/util/port.i"
 
-%include "tensorflow/python/lib/core/py_func.i"
 %include "tensorflow/python/lib/core/status.i"
 %include "tensorflow/python/lib/core/status_helper.i"
 
@@ -28,5 +27,3 @@ limitations under the License.
 %include "tensorflow/python/client/events_writer.i"
 
 %include "tensorflow/python/client/tf_session.i"
-
-%include "tensorflow/python/framework/python_op_gen.i"

@@ -17,8 +17,9 @@ limitations under the License.
 
 #include "tensorflow/core/common_runtime/gpu/pool_allocator.h"
 
-#include "tensorflow/core/platform/stream_executor.h"
-#include "tensorflow/core/platform/test.h"
+#include "tensorflow/stream_executor/multi_platform_manager.h"
+#include "tensorflow/stream_executor/platform.h"
+#include <gtest/gtest.h>
 
 namespace gpu = ::perftools::gputools;
 

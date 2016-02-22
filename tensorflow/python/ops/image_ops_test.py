@@ -133,31 +133,6 @@ class GrayscaleToRGBTest(test_util.TensorFlowTestCase):
       y_tf = y.eval()
       self.assertAllEqual(y_tf, y_np)
 
-  def testShapeInference(self):
-    # Shape inference works and produces expected output where possible
-    rgb_shape = [7, None, 19, 3]
-    gray_shape = rgb_shape[:-1] + [1]
-    with self.test_session():
-      rgb_tf = array_ops.placeholder(dtypes.uint8, shape=rgb_shape)
-      gray = image_ops.rgb_to_grayscale(rgb_tf)
-      self.assertEqual(gray_shape, gray.get_shape().as_list())
-
-    with self.test_session():
-      gray_tf = array_ops.placeholder(dtypes.uint8, shape=gray_shape)
-      rgb = image_ops.grayscale_to_rgb(gray_tf)
-      self.assertEqual(rgb_shape, rgb.get_shape().as_list())
-
-    # Shape inference does not break for unknown shapes
-    with self.test_session():
-      rgb_tf_unknown = array_ops.placeholder(dtypes.uint8)
-      gray_unknown = image_ops.rgb_to_grayscale(rgb_tf_unknown)
-      self.assertFalse(gray_unknown.get_shape())
-
-    with self.test_session():
-      gray_tf_unknown = array_ops.placeholder(dtypes.uint8)
-      rgb_unknown = image_ops.grayscale_to_rgb(gray_tf_unknown)
-      self.assertFalse(rgb_unknown.get_shape())
-
 
 class AdjustHueTest(test_util.TensorFlowTestCase):
 
@@ -288,32 +263,6 @@ class FlipTest(test_util.TensorFlowTestCase):
         y = image_ops.transpose_image(x_tf)
         y_tf = y.eval()
         self.assertAllEqual(y_tf, y_np)
-
-  def testPartialShapes(self):
-    p_unknown_rank = array_ops.placeholder(dtypes.uint8)
-    p_unknown_dims = array_ops.placeholder(dtypes.uint8,
-                                           shape=[None, None, None])
-    p_unknown_width = array_ops.placeholder(dtypes.uint8, shape=[64, None, 3])
-
-    p_wrong_rank = array_ops.placeholder(dtypes.uint8, shape=[None, None])
-    p_zero_dim = array_ops.placeholder(dtypes.uint8, shape=[64, 0, 3])
-
-    for op in [image_ops.flip_left_right,
-               image_ops.flip_up_down,
-               image_ops.random_flip_left_right,
-               image_ops.random_flip_up_down,
-               image_ops.transpose_image]:
-      transformed_unknown_rank = op(p_unknown_rank)
-      self.assertEqual(3, transformed_unknown_rank.get_shape().ndims)
-      transformed_unknown_dims = op(p_unknown_dims)
-      self.assertEqual(3, transformed_unknown_dims.get_shape().ndims)
-      transformed_unknown_width = op(p_unknown_width)
-      self.assertEqual(3, transformed_unknown_width.get_shape().ndims)
-
-      with self.assertRaisesRegexp(ValueError, 'must be three-dimensional'):
-        op(p_wrong_rank)
-      with self.assertRaisesRegexp(ValueError, 'must be > 0'):
-        op(p_zero_dim)
 
 
 class RandomFlipTest(test_util.TensorFlowTestCase):
@@ -1005,21 +954,6 @@ class PngTest(test_util.TensorFlowTestCase):
       # Smooth ramps compress well, but not too well
       self.assertGreaterEqual(len(png0), 400)
       self.assertLessEqual(len(png0), 750)
-
-  def testSyntheticUint16(self):
-    with self.test_session() as sess:
-      # Encode it, then decode it
-      image0 = constant_op.constant(_SimpleColorRamp(), dtype=dtypes.uint16)
-      png0 = image_ops.encode_png(image0, compression=7)
-      image1 = image_ops.decode_png(png0, dtype=dtypes.uint16)
-      png0, image0, image1 = sess.run([png0, image0, image1])
-
-      # PNG is lossless
-      self.assertAllEqual(image0, image1)
-
-      # Smooth ramps compress well, but not too well
-      self.assertGreaterEqual(len(png0), 800)
-      self.assertLessEqual(len(png0), 1500)
 
   def testShape(self):
     with self.test_session():

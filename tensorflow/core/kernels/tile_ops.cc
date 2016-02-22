@@ -23,14 +23,11 @@ limitations under the License.
 
 #include "tensorflow/core/kernels/tile_ops.h"
 
-#include <vector>
 #include "tensorflow/core/framework/numeric_op.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/type_index.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
-#include "tensorflow/core/platform/macros.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
 
@@ -48,9 +45,9 @@ class TileOp : public OpKernel {
     const Tensor& multiples = context->input(1);
 
     OP_REQUIRES(
-        context, IsLegacyVector(multiples.shape()),
+        context, TensorShapeUtils::IsLegacyVector(multiples.shape()),
         errors::InvalidArgument("Expected multiples to be 1-D, but got shape ",
-                                multiples.shape().DebugString()));
+                                multiples.shape().ShortDebugString()));
     OP_REQUIRES(context, input.dims() == multiples.NumElements(),
                 errors::InvalidArgument(
                     "Expected multiples argument to be a vector of length ",
@@ -68,16 +65,13 @@ class TileOp : public OpKernel {
     TensorShape output_shape;
     for (int i = 0; i < input_dims; ++i) {
       OP_REQUIRES(
-          context, multiples_array[i] >= 0,
-          errors::InvalidArgument("Expected multiples[", i, "] >= 0, but got ",
+          context, multiples_array[i] > 0,
+          errors::InvalidArgument("Expected multiples[", i, "] > 0, but got ",
                                   multiples_array[i]));
       output_shape.AddDim(input.dim_size(i) * multiples_array[i]);
     }
     Tensor* result = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &result));
-
-    // If there's no output, there's nothing to do.
-    if (output_shape.num_elements() == 0) return;
 
 #define HANDLE_DIM(DT, NDIM)                                   \
   if (context->input(0).dtype() == DT && input_dims == NDIM) { \
@@ -186,17 +180,15 @@ HANDLE_CASE_DIM(GPUDevice, DT_INT64);
 template <typename Device>
 class TileGradientOp : public OpKernel {
  public:
-  explicit TileGradientOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_DEPRECATED(context, 3, "TileGrad has been replaced with reduce_sum");
-  }
+  explicit TileGradientOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     const Tensor& input = context->input(0);
     const Tensor& multiples = context->input(1);
     OP_REQUIRES(
-        context, IsLegacyVector(multiples.shape()),
+        context, TensorShapeUtils::IsLegacyVector(multiples.shape()),
         errors::InvalidArgument("Expected multiples to be 1-D, but got shape ",
-                                multiples.shape().DebugString()));
+                                multiples.shape().ShortDebugString()));
     OP_REQUIRES(context, input.dims() == multiples.NumElements(),
                 errors::InvalidArgument(
                     "Expected multiples argument to be a vector of length ",
@@ -363,8 +355,12 @@ inline void TileGradientOp<Device>::HandleCase(
     OpKernelContext* context, const std::vector<int32>& input_dims,
     const gtl::ArraySlice<int32>& multiples_array, Tensor* result) {
   LOG(FATAL) << "TileGradientOp: Invalid combination of Device, DT and NDIM: "
-             << MakeTypeIndex<Device>().name() << ", " << DataTypeString(DT)
-             << ", " << NDIM;
+#ifdef __ANDROID__
+             << "[Device not shown, no RTTI], " << DataTypeString(DT) << ", "
+#else   // __ANDROID__
+             << typeid(Device).name() << ", " << DataTypeString(DT) << ", "
+#endif  // __ANDROID__
+             << NDIM;
 }
 
 #define HANDLE_CASE(device, dtype, ndim)                                       \

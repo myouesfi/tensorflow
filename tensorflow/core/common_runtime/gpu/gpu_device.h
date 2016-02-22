@@ -20,7 +20,7 @@ limitations under the License.
 #ifndef TENSORFLOW_COMMON_RUNTIME_GPU_GPU_DEVICE_H_
 #define TENSORFLOW_COMMON_RUNTIME_GPU_GPU_DEVICE_H_
 
-#include <vector>
+#include "tensorflow/stream_executor/stream.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/common_runtime/device_factory.h"
 #include "tensorflow/core/common_runtime/gpu/gpu_event_mgr.h"
@@ -29,33 +29,28 @@ limitations under the License.
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/framework/device_base.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/stream_executor.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 #include "tensorflow/core/public/session_options.h"
+#include "tensorflow/core/public/status.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
+
+class EigenAllocator;
 
 class BaseGPUDevice : public LocalDevice {
  public:
   BaseGPUDevice(const SessionOptions& options, const string& name,
                 Bytes memory_limit, BusAdjacency bus_adjacency, int gpu_id,
                 const string& physical_device_desc, Allocator* gpu_allocator,
-                Allocator* cpu_allocator, bool sync_every_op,
-                int32 max_streams);
+                Allocator* cpu_allocator);
 
   ~BaseGPUDevice() override;
 
   // GPU devices require the Op Compute method to save a reference to
   // any temporary tensors that are allocated until the Op execution
   // completes.
-  bool RequiresRecordingAccessedTensors() const override;
-
-  void ConsumeListOfAccessedTensors(
-      DeviceContext* device_context,
-      const TensorReferenceVector& tensor_refs) override;
+  bool SaveTemporaryTensors() const override { return true; }
 
   Status FillContextMap(const Graph* graph,
                         DeviceContextMap* device_context_map);
@@ -72,31 +67,22 @@ class BaseGPUDevice : public LocalDevice {
                              Tensor* tensor) override;
 
   // The caller owns the returned device.
-  PerOpGpuDevice* MakeGpuDevice() override;
-
-  void ReinitializeGpuDevice(PerOpGpuDevice* device, DeviceContext* dc,
-                             Allocator* allocator) override;
+  const PerOpGpuDevice* MakeGpuDevice(DeviceContext* dc,
+                                      Allocator* allocator) override;
 
  protected:
   Allocator* gpu_allocator_;  // not owned
   Allocator* cpu_allocator_;  // not owned
 
  private:
-  struct StreamGroup {
-    gpu::Stream* compute;
-    gpu::Stream* copy_in;
-    gpu::Stream* copy_out;
-  };
-  gtl::InlinedVector<StreamGroup, 4> streams_;
+  std::vector<gpu::Stream*> streams_;
   std::vector<GPUDeviceContext*> device_contexts_;
   GpuDeviceInfo* gpu_device_info_ = nullptr;
   mutex trace_mu_;
   int gpu_id_ = -1;
-  const bool sync_every_op_ = false;
   std::unique_ptr<EventMgr> em_;
 
-  void ReinitializeDevice(PerOpGpuDevice* device, int stream_id,
-                          Allocator* allocator);
+  const PerOpGpuDevice* NewDevice(int stream_id, Allocator* allocator);
 };
 
 class BaseGPUDeviceFactory : public DeviceFactory {

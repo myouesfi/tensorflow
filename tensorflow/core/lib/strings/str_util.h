@@ -17,11 +17,10 @@ limitations under the License.
 #define TENSORFLOW_LIB_STRINGS_STR_UTIL_H_
 
 #include <string>
-#include <vector>
 #include "tensorflow/core/lib/core/stringpiece.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/strings/strcat.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 // Basic string utility routines
 namespace tensorflow {
@@ -66,11 +65,6 @@ size_t RemoveWhitespaceContext(StringPiece* text);
 // overflow occurred, returns false.  Otherwise, returns false.
 bool ConsumeLeadingDigits(StringPiece* s, uint64* val);
 
-// Consume a leading token composed of non-whitespace characters only.
-// If *s starts with a non-zero number of non-whitespace characters, store
-// them in *val, advance *s past them, and return true.  Else return false.
-bool ConsumeNonWhitespace(StringPiece* s, StringPiece* val);
-
 // If "*s" starts with "expected", consume it and return true.
 // Otherwise, return false.
 bool ConsumePrefix(StringPiece* s, StringPiece expected);
@@ -87,7 +81,9 @@ void TitlecaseString(string* s, StringPiece delimiters);
 
 // Join functionality
 template <typename T>
-string Join(const T& s, const char* sep);
+string Join(const std::vector<T>& s, const char* sep);
+template <typename T>
+string Join(const gtl::ArraySlice<T>& s, const char* sep);
 
 struct AllowEmpty {
   bool operator()(StringPiece sp) const { return true; }
@@ -114,15 +110,30 @@ bool SplitAndParseAsInts(StringPiece text, char delim,
 
 // ------------------------------------------------------------------
 // Implementation details below
+namespace internal {
 template <typename T>
-string Join(const T& s, const char* sep) {
+string JoinHelper(typename gtl::ArraySlice<T>::const_iterator begin,
+                  typename gtl::ArraySlice<T>::const_iterator end,
+                  const char* sep) {
   string result;
   bool first = true;
-  for (const auto& x : s) {
-    tensorflow::strings::StrAppend(&result, (first ? "" : sep), x);
+  for (typename gtl::ArraySlice<T>::const_iterator it = begin; it != end;
+       ++it) {
+    tensorflow::strings::StrAppend(&result, (first ? "" : sep), *it);
     first = false;
   }
   return result;
+}
+}  // namespace internal
+
+template <typename T>
+string Join(const std::vector<T>& s, const char* sep) {
+  return Join<T>(gtl::ArraySlice<T>(s), sep);
+}
+
+template <typename T>
+string Join(const gtl::ArraySlice<T>& s, const char* sep) {
+  return internal::JoinHelper<T>(s.begin(), s.end(), sep);
 }
 
 inline std::vector<string> Split(StringPiece text, char delim) {
@@ -134,7 +145,7 @@ std::vector<string> Split(StringPiece text, char delim, Predicate p) {
   std::vector<string> result;
   int token_start = 0;
   if (!text.empty()) {
-    for (size_t i = 0; i < text.size() + 1; i++) {
+    for (int i = 0; i < text.size() + 1; i++) {
       if ((i == text.size()) || (text[i] == delim)) {
         StringPiece token(text.data() + token_start, i - token_start);
         if (p(token)) {

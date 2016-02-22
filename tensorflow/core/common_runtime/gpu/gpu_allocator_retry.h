@@ -16,9 +16,8 @@ limitations under the License.
 #ifndef TENSORFLOW_CORE_COMMON_RUNTIME_GPU_GPU_ALLOCATOR_RETRY_H_
 #define TENSORFLOW_CORE_COMMON_RUNTIME_GPU_GPU_ALLOCATOR_RETRY_H_
 
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/env.h"
 
 namespace tensorflow {
 
@@ -32,7 +31,7 @@ class GPUAllocatorRetry {
   // then wait up to 'max_millis_to_wait' milliseconds, retrying each
   // time a call to DeallocateRaw() is detected, until either a good
   // pointer is returned or the deadline is exhausted.  If the
-  // deadline is exhausted, try one more time with 'verbose_failure'
+  // deadline is exahusted, try one more time with 'verbose_failure'
   // set to true.  The value returned is either the first good pointer
   // obtained from 'alloc_func' or nullptr.
   void* AllocateRaw(std::function<void*(size_t alignment, size_t num_bytes,

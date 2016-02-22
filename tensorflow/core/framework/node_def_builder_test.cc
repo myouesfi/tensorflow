@@ -16,14 +16,13 @@ limitations under the License.
 #include "tensorflow/core/framework/node_def_builder.h"
 
 #include <memory>
-#include <vector>
+#include <gtest/gtest.h>
 #include "tensorflow/core/framework/fake_input.h"
 #include "tensorflow/core/framework/node_def_util.h"
 #include "tensorflow/core/framework/op_def_builder.h"
 #include "tensorflow/core/framework/op_def_util.h"
 #include "tensorflow/core/lib/core/status_test_util.h"
 #include "tensorflow/core/platform/protobuf.h"
-#include "tensorflow/core/platform/test.h"
 
 namespace tensorflow {
 namespace {
@@ -32,7 +31,7 @@ class NodeDefBuilderTest : public ::testing::Test {
  protected:
   // Specify an OpDef via an OpDefBuilder.
   void Op(const OpDefBuilder& op_def_builder) {
-    TF_EXPECT_OK(op_def_builder.Finalize(&op_def_));
+    EXPECT_OK(op_def_builder.Finalize(&op_def_));
   }
 
   // Resets builder_ with a new NodeDefBuilder using the Op from the last call
@@ -50,7 +49,7 @@ class NodeDefBuilderTest : public ::testing::Test {
                      DataTypeSlice expected_out_types, StringPiece proto) {
     NodeDef node_def;
     Status status = builder.Finalize(&node_def);
-    TF_EXPECT_OK(status);
+    EXPECT_OK(status);
     if (!status.ok()) return;
     NodeDef expected;
     protobuf::TextFormat::ParseFromString(strings::StrCat("name: 'n' ", proto),
@@ -60,7 +59,7 @@ class NodeDefBuilderTest : public ::testing::Test {
     DataTypeVector in_types, out_types;
     status =
         InOutTypesForNode(node_def, builder.op_def(), &in_types, &out_types);
-    TF_EXPECT_OK(status);
+    EXPECT_OK(status);
     if (!status.ok()) return;
     EXPECT_EQ(DataTypeSliceString(expected_in_types),
               DataTypeVectorString(in_types));
@@ -68,7 +67,7 @@ class NodeDefBuilderTest : public ::testing::Test {
               DataTypeVectorString(out_types));
 
     status = ValidateNodeDef(node_def, op_def_);
-    TF_EXPECT_OK(status);
+    EXPECT_OK(status);
   }
 
   // Calls Finalize() and verifies it returns an error.

@@ -62,8 +62,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
-
 from google.protobuf import descriptor
 from google.protobuf import message
 from google.protobuf import text_format
@@ -171,10 +169,6 @@ def NormalizeNumberFields(pb):
   return pb
 
 
-def _IsMap(value):
-  return isinstance(value, collections.Mapping)
-
-
 def _IsRepeatedContainer(value):
   if isinstance(value, six.string_types):
     return False
@@ -202,10 +196,8 @@ def ProtoEq(a, b):
     (for repeated fields) to value, or just pb unchanged if it's neither."""
     if isinstance(pb, message.Message):
       return dict((desc.number, value) for desc, value in pb.ListFields())
-    elif _IsMap(pb):
-      return dict(pb.items())
     elif _IsRepeatedContainer(pb):
-      return dict(enumerate(list(pb)))
+      return dict(enumerate(pb))
     else:
       return pb
 

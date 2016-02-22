@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "tensorflow/core/graph/costutil.h"
 
-#include <vector>
 #include "tensorflow/core/graph/algorithm.h"
 #include "tensorflow/core/graph/costmodel.h"
 #include "tensorflow/core/graph/graph.h"

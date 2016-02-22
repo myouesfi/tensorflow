@@ -7,9 +7,8 @@ licenses(["notice"])  # Apache 2.0
 
 exports_files(["LICENSE"])
 
-load("//tensorflow:tensorflow.bzl", "tf_copts")
-load("//tensorflow:tensorflow.bzl", "tf_cuda_library")
-load("//tensorflow/core:platform/default/build_config.bzl", "tf_get_cuda_version")
+load("/tensorflow/tensorflow", "tf_copts")
+load("/tensorflow/tensorflow", "tf_cuda_library")
 
 cc_library(
     name = "gtest",
@@ -75,7 +74,7 @@ filegroup(
 cc_library(
     name = "cuda",
     data = [
-        "//third_party/gpus/cuda:lib64/libcudart.so." + tf_get_cuda_version(),
+        "//third_party/gpus/cuda:lib64/libcudart.so.7.0",
     ],
     linkopts = [
         "-Wl,-rpath,third_party/gpus/cuda/lib64",

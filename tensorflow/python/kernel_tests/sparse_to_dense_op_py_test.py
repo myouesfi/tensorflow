@@ -25,11 +25,9 @@ import tensorflow as tf
 
 
 def _SparseToDense(sparse_indices, output_size, sparse_values,
-                   default_value, validate_indices=True):
+                   default_value):
   return tf.sparse_to_dense(sparse_indices, output_size,
-                            sparse_values,
-                            default_value=default_value,
-                            validate_indices=validate_indices)
+                            sparse_values, default_value)
 
 
 class SparseToDenseTest(tf.test.TestCase):
@@ -109,23 +107,9 @@ class SparseToDenseTest(tf.test.TestCase):
 
   def testBadDefault(self):
     with self.test_session():
-      dense = _SparseToDense([1, 3], [5], [1, 2], [0])
+      dense = _SparseToDense([1, 3], [5], [1, 2], [1, 2])
       with self.assertRaisesOpError("default_value should be a scalar"):
         dense.eval()
-
-  def testInvalidIndicesWithWithoutValidation(self):
-    with self.test_session():
-      dense = _SparseToDense(
-          sparse_indices=[[1], [1]], output_size=[5],
-          sparse_values=[-1.0, 1.0], default_value=0.0)
-      with self.assertRaisesOpError(
-          "not lexicographically sorted or containing repeats"):
-        dense.eval()
-      # Disable checks
-      dense_without_validation = _SparseToDense(
-          sparse_indices=[[1], [1]], output_size=[5],
-          sparse_values=[-1.0, 1.0], default_value=0.0, validate_indices=False)
-      dense_without_validation.eval()
 
   def testShapeInferenceKnownShape(self):
     with self.test_session(use_gpu=False):

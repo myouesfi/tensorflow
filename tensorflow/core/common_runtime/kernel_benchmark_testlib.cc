@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "tensorflow/core/common_runtime/kernel_benchmark_testlib.h"
 
-#include <vector>
 #include "tensorflow/core/common_runtime/device.h"
 #include "tensorflow/core/common_runtime/device_factory.h"
 #include "tensorflow/core/framework/op.h"
@@ -26,13 +25,18 @@ limitations under the License.
 #include "tensorflow/core/lib/core/notification.h"
 #include "tensorflow/core/lib/core/threadpool.h"
 #include "tensorflow/core/lib/strings/str_util.h"
-#include "tensorflow/core/platform/host_info.h"
 #include "tensorflow/core/platform/logging.h"
+#include "tensorflow/core/platform/port.h"
 #include "tensorflow/core/platform/test_benchmark.h"
-#include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/public/session_options.h"
 #include "tensorflow/core/public/version.h"
 #include "tensorflow/core/util/device_name_utils.h"
+
+#if defined(PLATFORM_GOOGLE)
+DECLARE_bool(brain_gpu_use_bfc_allocator);
+#else
+extern bool FLAGS_brain_gpu_use_bfc_allocator;
+#endif
 
 namespace tensorflow {
 namespace test {
@@ -40,6 +44,8 @@ namespace test {
 Benchmark::Benchmark(const string& device, Graph* g,
                      const SessionOptions* options, Graph* init) {
   RequireDefaultOps();
+
+  FLAGS_brain_gpu_use_bfc_allocator = true;
 
   SessionOptions default_options;
   if (!options) {
@@ -61,23 +67,20 @@ Benchmark::Benchmark(const string& device, Graph* g,
 
   rendez_ = NewLocalRendezvous();
 
-  const int graph_def_version = g->versions().producer();
-
-  LocalExecutorParams params;
-  params.device = device_;
-  params.function_library = nullptr;
-  params.create_kernel = [this, graph_def_version](const NodeDef& ndef,
-                                                   OpKernel** kernel) {
-    return CreateNonCachedKernel(device_, nullptr, ndef, graph_def_version,
-                                 kernel);
-  };
-  params.delete_kernel = [](OpKernel* kernel) {
-    DeleteNonCachedKernel(kernel);
-  };
+  const int graph_def_version = g->version();
 
   if (init) {
     Executor* init_exec;
-    TF_CHECK_OK(NewLocalExecutor(params, init, &init_exec));
+    TF_CHECK_OK(NewLocalExecutor(
+        {
+            device_, nullptr, false,
+            [this, graph_def_version](const NodeDef& ndef, OpKernel** kernel) {
+              return CreateNonCachedKernel(device_, nullptr, ndef,
+                                           graph_def_version, kernel);
+            },
+            [](OpKernel* kernel) { DeleteNonCachedKernel(kernel); },
+        },
+        init, &init_exec));
     Executor::Args args;
     args.rendezvous = rendez_;
     args.runner = runner;
@@ -85,7 +88,16 @@ Benchmark::Benchmark(const string& device, Graph* g,
     delete init_exec;
   }
 
-  TF_CHECK_OK(NewLocalExecutor(params, g, &exec_));
+  TF_CHECK_OK(NewLocalExecutor(
+      {
+          device_, nullptr, false,
+          [this, graph_def_version](const NodeDef& ndef, OpKernel** kernel) {
+            return CreateNonCachedKernel(device_, nullptr, ndef,
+                                         graph_def_version, kernel);
+          },
+          [](OpKernel* kernel) { DeleteNonCachedKernel(kernel); },
+      },
+      g, &exec_));
 }
 
 Benchmark::~Benchmark() {

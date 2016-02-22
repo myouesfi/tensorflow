@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "tensorflow/core/framework/op_segment.h"
 
-#include <vector>
+#include <gtest/gtest.h>
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/framework/node_def_builder.h"
@@ -25,7 +25,6 @@ limitations under the License.
 #include "tensorflow/core/lib/core/status_test_util.h"
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/test.h"
 #include "tensorflow/core/public/version.h"
 
 namespace tensorflow {
@@ -85,12 +84,12 @@ TEST_F(OpSegmentTest, Basic) {
   for (int i = 0; i < 10; ++i) {
     // Register in session A.
     auto* ndef = &float_nodedefs_[i];
-    TF_EXPECT_OK(opseg.FindOrCreate("A", ndef->name(), &op, GetFn(ndef)));
+    EXPECT_OK(opseg.FindOrCreate("A", ndef->name(), &op, GetFn(ndef)));
     ValidateOpAndTypes(op, *ndef, DT_FLOAT);
 
     // Register in session B.
     ndef = &int32_nodedefs_[i];
-    TF_EXPECT_OK(opseg.FindOrCreate("B", ndef->name(), &op, GetFn(ndef)));
+    EXPECT_OK(opseg.FindOrCreate("B", ndef->name(), &op, GetFn(ndef)));
     ValidateOpAndTypes(op, *ndef, DT_INT32);
   }
 
@@ -99,13 +98,11 @@ TEST_F(OpSegmentTest, Basic) {
   };
   for (int i = 0; i < 10; ++i) {
     // Lookup op in session A.
-    TF_EXPECT_OK(
-        opseg.FindOrCreate("A", strings::StrCat("op", i), &op, reterr));
+    EXPECT_OK(opseg.FindOrCreate("A", strings::StrCat("op", i), &op, reterr));
     ValidateOpAndTypes(op, float_nodedefs_[i], DT_FLOAT);
 
     // Lookup op in session B.
-    TF_EXPECT_OK(
-        opseg.FindOrCreate("B", strings::StrCat("op", i), &op, reterr));
+    EXPECT_OK(opseg.FindOrCreate("B", strings::StrCat("op", i), &op, reterr));
     ValidateOpAndTypes(op, int32_nodedefs_[i], DT_INT32);
   }
 
@@ -142,7 +139,7 @@ TEST_F(OpSegmentTest, AddRemoveHolds) {
 
   // Thread1 register the op and wants to ensure it alive.
   opseg.AddHold("foo");
-  TF_EXPECT_OK(opseg.FindOrCreate("foo", ndef.name(), &op, GetFn(&ndef)));
+  EXPECT_OK(opseg.FindOrCreate("foo", ndef.name(), &op, GetFn(&ndef)));
 
   // Thread2 starts some execution needs "op" to be alive.
   opseg.AddHold("foo");

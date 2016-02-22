@@ -15,7 +15,8 @@
 
 """Updates generated docs from Python doc comments.
 
-Updates the documentation files.
+Both updates the files in the file-system and executes g4 commands to
+make sure any changes are ready to be submitted.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -120,7 +121,7 @@ def collect_members(module_to_name):
           if len(fullname) == len(other_fullname):
             raise RuntimeError("Can't decide whether to use %s or %s for %s: "
                                "both full names have length %d" %
-                               (fullname, other_fullname, name, len(fullname)))
+                               (fullname, other_fullname, len(fullname)))
           if len(fullname) > len(other_fullname):
             continue  # Use the shorter full name
         members[name] = fullname, member
@@ -263,10 +264,7 @@ class Library(Document):
     if argspec.defaults:
       for arg, default in zip(
           argspec.args[first_arg_with_default:], argspec.defaults):
-        if callable(default):
-          args_list.append("%s=%s" % (arg, default.__name__))
-        else:
-          args_list.append("%s=%r" % (arg, default))
+        args_list.append("%s=%r" % (arg, default))
     if argspec.varargs:
       args_list.append("*" + argspec.varargs)
     if argspec.keywords:
@@ -407,7 +405,7 @@ class Library(Document):
         print(l, file=f)
 
   def _write_class_markdown_to_file(self, f, name, cls):
-    """Write the class doc to `f`.
+    """Write the class doc to 'f'.
 
     Args:
       f: File to write to.

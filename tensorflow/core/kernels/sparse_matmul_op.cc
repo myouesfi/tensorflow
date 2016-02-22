@@ -17,10 +17,9 @@ limitations under the License.
 
 #define EIGEN_USE_THREADS
 
-#include <vector>
+#include "tensorflow/core/common_runtime/device.h"
 #include "third_party/eigen3/Eigen/Core"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-#include "tensorflow/core/common_runtime/device.h"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/types.h"
@@ -28,8 +27,7 @@ limitations under the License.
 #include "tensorflow/core/lib/core/threadpool.h"
 #include "tensorflow/core/lib/gtl/stl_util.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 
@@ -803,7 +801,7 @@ inline void SparseMatMulOp::ComputeBlockSizes(const ConstMatrixMap& left,
 
   *JB = std::max(1, static_cast<int>(sqrt(num_threads) / 2.0));
   *IB = 8 * *JB;
-  DCHECK_EQ(N * sizeof(float) % 64, size_t{0});
+  DCHECK_EQ(N * sizeof(float) % 64, 0);
 }
 
 // Here is a an overview of the SparseMatMul code. Note that we assume that the

@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "tensorflow/core/util/work_sharder.h"
 
+#include <vector>
 #include "tensorflow/core/lib/core/blocking_counter.h"
 #include "tensorflow/core/platform/logging.h"
 

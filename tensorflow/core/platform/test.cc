@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 #if defined(PLATFORM_GOOGLE) || defined(PLATFORM_POSIX_ANDROID) || \
     defined(PLATFORM_GOOGLE_ANDROID)
-#include "tensorflow/core/platform/google/build_config/googletest.h"
+#include "testing/base/public/googletest.h"
 #endif
 
 namespace tensorflow {

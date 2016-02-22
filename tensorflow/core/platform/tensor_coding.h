@@ -20,8 +20,7 @@ limitations under the License.
 #include <string>
 #include "tensorflow/core/lib/core/refcount.h"
 #include "tensorflow/core/lib/core/stringpiece.h"
-#include "tensorflow/core/platform/platform.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 #ifdef PLATFORM_GOOGLE
 #include "tensorflow/core/platform/google/cord_coding.h"

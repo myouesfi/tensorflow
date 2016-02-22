@@ -17,9 +17,8 @@ limitations under the License.
 
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/register_types.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
 
@@ -100,14 +99,14 @@ class ScatterUpdateOp : public OpKernel {
     OP_REQUIRES(
         c, TensorShapeUtils::IsVectorOrHigher(Tparams.shape()),
         errors::InvalidArgument("params must be at least 1-D, got shape ",
-                                Tparams.shape().DebugString()));
+                                Tparams.shape().ShortDebugString()));
     OP_REQUIRES(
         c, ValidShapes(Tparams, Tupdates, Tindices),
         errors::InvalidArgument(
             "Must have updates.shape = indices.shape + params.shape[1:], got ",
-            "updates.shape ", Tupdates.shape().DebugString(),
-            ", indices.shape ", Tindices.shape().DebugString(),
-            ", params.shape ", Tparams.shape().DebugString()));
+            "updates.shape ", Tupdates.shape().ShortDebugString(),
+            ", indices.shape ", Tindices.shape().ShortDebugString(),
+            ", params.shape ", Tparams.shape().ShortDebugString()));
     const Index N = Tindices.NumElements();
 
     // We always return the input ref.

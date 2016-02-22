@@ -15,8 +15,6 @@ limitations under the License.
 
 #include "tensorflow/core/kernels/ops_testutil.h"
 
-#include <vector>
-
 namespace tensorflow {
 namespace test {
 

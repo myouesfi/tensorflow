@@ -18,12 +18,10 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 #include "tensorflow/core/public/session_options.h"
 
 namespace tensorflow {
@@ -116,7 +114,7 @@ Device* DeviceFactory::NewDevice(const string& type,
   (*opt.config.mutable_device_count())[type] = 1;
   std::vector<Device*> devices;
   device_factory->CreateDevices(opt, name_prefix, &devices);
-  CHECK_EQ(devices.size(), size_t{1});
+  CHECK_EQ(devices.size(), 1);
   return devices[0];
 }
 

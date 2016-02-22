@@ -44,7 +44,7 @@ class Optimizer(object):
   # Add Ops to the graph to minimize a cost by updating a list of variables.
   # "cost" is a Tensor, and the list of variables contains tf.Variable
   # objects.
-  opt_op = opt.minimize(cost, var_list=<list of variables>)
+  opt_op = opt.minimize(cost, <list of variables>)
   ```
 
   In the training program you will just have to run the returned Op.
@@ -142,7 +142,7 @@ class Optimizer(object):
         for the optimizer.
 
     Raises:
-      ValueError: If name is malformed.
+      ValueError: if name is malformed.
     """
     if not name:
       raise ValueError("Must specify the optimizer name")
@@ -153,8 +153,7 @@ class Optimizer(object):
     self._slots = {}
 
   def minimize(self, loss, global_step=None, var_list=None,
-               gate_gradients=GATE_OP, aggregation_method=None,
-               colocate_gradients_with_ops=False, name=None):
+               gate_gradients=GATE_OP, aggregation_method=None, name=None):
     """Add operations to minimize `loss` by updating `var_list`.
 
     This method simply combines calls `compute_gradients()` and
@@ -173,8 +172,6 @@ class Optimizer(object):
         `GATE_NONE`, `GATE_OP`, or  `GATE_GRAPH`.
       aggregation_method: Specifies the method used to combine gradient terms.
         Valid values are defined in the class `AggregationMethod`.
-      colocate_gradients_with_ops: If True, try colocating gradients with
-        the corresponding op.
       name: Optional name for the returned operation.
 
     Returns:
@@ -182,18 +179,16 @@ class Optimizer(object):
       was not `None`, that operation also increments `global_step`.
 
     Raises:
-      ValueError: If some of the variables are not `Variable` objects.
+      ValueError: if some of the variables are not `Variable` objects.
     """
     grads_and_vars = self.compute_gradients(
         loss, var_list=var_list, gate_gradients=gate_gradients,
-        aggregation_method=aggregation_method,
-        colocate_gradients_with_ops=colocate_gradients_with_ops)
+        aggregation_method=aggregation_method)
     return self.apply_gradients(grads_and_vars, global_step=global_step,
                                 name=name)
 
   def compute_gradients(self, loss, var_list=None, gate_gradients=GATE_OP,
-                        aggregation_method=None,
-                        colocate_gradients_with_ops=False):
+                        aggregation_method=None):
     """Compute gradients of `loss` for the variables in `var_list`.
 
     This is the first part of `minimize()`.  It returns a list
@@ -211,8 +206,6 @@ class Optimizer(object):
         `GATE_NONE`, `GATE_OP`, or `GATE_GRAPH`.
       aggregation_method: Specifies the method used to combine gradient terms.
         Valid values are defined in the class `AggregationMethod`.
-      colocate_gradients_with_ops: If True, try colocating gradients with
-        the corresponding op.
 
     Returns:
       A list of (gradient, variable) pairs.
@@ -234,11 +227,9 @@ class Optimizer(object):
         raise TypeError("Argument is not a tf.Variable: %s" % var)
     if not var_list:
       raise ValueError("No variables to optimize")
-    var_refs = [v.ref() for v in var_list]
     grads = gradients.gradients(
-        loss, var_refs, gate_gradients=(gate_gradients == Optimizer.GATE_OP),
-        aggregation_method=aggregation_method,
-        colocate_gradients_with_ops=colocate_gradients_with_ops)
+        loss, var_list, gate_gradients=(gate_gradients == Optimizer.GATE_OP),
+        aggregation_method=aggregation_method)
     if gate_gradients == Optimizer.GATE_GRAPH:
       grads = control_flow_ops.tuple(grads)
     grads_and_vars = list(zip(grads, var_list))
@@ -264,8 +255,8 @@ class Optimizer(object):
       was not None, that operation also increments `global_step`.
 
     Raises:
-      TypeError: If `grads_and_vars` is malformed.
-      ValueError: If none of the variables have gradients.
+      TypeError: if `grads_and_vars` is malformed.
+      ValueError: if none of the variables have gradients.
     """
     # This is a default implementation of apply_gradients() that can be shared
     # by most optimizers.  It relies on the subclass implementing the following
@@ -340,10 +331,9 @@ class Optimizer(object):
     """Asserts tensors are all valid types (see `_valid_dtypes`).
 
     Args:
-      tensors: Tensors to check.
-
+      tensors: tensors to check.
     Raises:
-      ValueError: If any tensor is not a valid type.
+      ValueError: if any tensor is not a valid type.
     """
     valid_dtypes = self._valid_dtypes()
     for t in tensors:
@@ -418,7 +408,7 @@ class Optimizer(object):
       update_ops: List of `Operation` objects to update variables.  This list
         contains the values returned by the `_apply_dense()` and
         `_apply_sparse()` calls.
-      name_scope: String.  Name to use for the returned operation.
+      name_scope: string.  Name to use for the returned operation.
 
     Returns:
       The operation to apply updates.

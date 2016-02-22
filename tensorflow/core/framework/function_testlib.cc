@@ -28,9 +28,7 @@ typedef FunctionDefHelper FDH;
 GraphDef GDef(gtl::ArraySlice<NodeDef> nodes,
               gtl::ArraySlice<FunctionDef> funcs) {
   GraphDef g;
-  VersionDef* versions = g.mutable_versions();
-  versions->set_producer(TF_GRAPH_DEF_VERSION);
-  versions->set_min_consumer(TF_GRAPH_DEF_VERSION_MIN_CONSUMER);
+  g.set_version(TF_GRAPH_DEF_VERSION);
   for (auto n : nodes) {
     *(g.add_node()) = n;
   }

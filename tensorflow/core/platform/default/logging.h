@@ -16,12 +16,8 @@ limitations under the License.
 #ifndef TENSORFLOW_PLATFORM_DEFAULT_LOGGING_H_
 #define TENSORFLOW_PLATFORM_DEFAULT_LOGGING_H_
 
-// IWYU pragma: private, include "third_party/tensorflow/core/platform/logging.h"
-// IWYU pragma: friend third_party/tensorflow/core/platform/logging.h
-
 #include <sstream>
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
 
 namespace tensorflow {
 const int INFO = 0;            // base_logging::INFO;

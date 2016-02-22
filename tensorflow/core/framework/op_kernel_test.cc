@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <memory>
 #include <vector>
+#include <gtest/gtest.h>
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/framework/attr_value_util.h"
 #include "tensorflow/core/framework/fake_input.h"
@@ -29,7 +30,6 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/protobuf.h"
-#include "tensorflow/core/platform/test.h"
 #include "tensorflow/core/public/version.h"
 
 class DummyKernel : public tensorflow::OpKernel {
@@ -182,7 +182,7 @@ TEST_F(OpKernelTest, SuccessBothCpuAndGpu) {
 TEST_F(OpKernelTest, CpuTypeRegistered) {
   NodeDef ndef = CreateNodeDef("Test1", {DT_FLOAT, DT_INT32});
   DeviceTypeVector devs;
-  TF_ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
+  ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
   EXPECT_EQ(1, devs.size());
   EXPECT_EQ(DeviceType(DEVICE_CPU), devs[0]);
 }
@@ -193,7 +193,7 @@ TEST_F(OpKernelTest, CpuAndGpuTypeRegistered) {
     // only on CPU.
     NodeDef ndef = CreateNodeDef("Test3", {DT_INT8, DT_INT8});
     DeviceTypeVector devs;
-    TF_ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
+    ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
     EXPECT_EQ(1, devs.size());
     EXPECT_EQ(DeviceType(DEVICE_CPU), devs[0]);
   }
@@ -202,7 +202,7 @@ TEST_F(OpKernelTest, CpuAndGpuTypeRegistered) {
     // only on GPU.
     NodeDef ndef = CreateNodeDef("Test3", {DT_FLOAT, DT_FLOAT});
     DeviceTypeVector devs;
-    TF_ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
+    ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
     EXPECT_EQ(1, devs.size());
     EXPECT_EQ(DeviceType(DEVICE_GPU), devs[0]);
   }
@@ -210,7 +210,7 @@ TEST_F(OpKernelTest, CpuAndGpuTypeRegistered) {
     // Try a node def of an op that is only registered for other types.
     NodeDef ndef = CreateNodeDef("Test3", {DT_STRING, DT_STRING});
     DeviceTypeVector devs;
-    TF_ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
+    ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
     EXPECT_EQ(0, devs.size());
   }
 
@@ -218,7 +218,7 @@ TEST_F(OpKernelTest, CpuAndGpuTypeRegistered) {
     // Try a node def of an op that is registered for both.
     NodeDef ndef = CreateNodeDef("Test4", {DT_FLOAT});
     DeviceTypeVector devs;
-    TF_ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
+    ASSERT_OK(SupportedDeviceTypesForNode(DeviceTypes(), ndef, &devs));
     EXPECT_EQ(2, devs.size());
     EXPECT_EQ(DeviceType(DEVICE_GPU), devs[0]);
     EXPECT_EQ(DeviceType(DEVICE_CPU), devs[1]);
@@ -272,7 +272,7 @@ TEST_F(OpKernelTest, MatchSignatureFailes) {
 class DummyDevice : public DeviceBase {
  public:
   DummyDevice(Env* env, bool save) : DeviceBase(env), save_(save) {}
-  bool RequiresRecordingAccessedTensors() const override { return save_; }
+  bool SaveTemporaryTensors() const override { return save_; }
   Allocator* GetAllocator(AllocatorAttributes /*attr*/) override {
     return cpu_allocator();
   }
@@ -292,14 +292,12 @@ TEST_F(OpKernelTest, SaveTempFalse) {
                      TF_GRAPH_DEF_VERSION, &status));
   EXPECT_TRUE(status.ok());
   params.op_kernel = op.get();
-  OpKernelContext* ctx = new OpKernelContext(&params);
+  OpKernelContext* ctx = new OpKernelContext(params);
 
   Tensor t;
-  TF_EXPECT_OK(ctx->allocate_temp(DT_FLOAT, TensorShape(), &t));
+  EXPECT_OK(ctx->allocate_temp(DT_FLOAT, TensorShape(), &t));
 
-  TensorReferenceVector referenced_tensors;
-  ctx->retrieve_accessed_tensors(&referenced_tensors);
-  EXPECT_EQ(0, referenced_tensors.size());
+  EXPECT_EQ(0, ctx->num_temps());
 
   delete ctx;
   delete params.device;
@@ -316,17 +314,12 @@ TEST_F(OpKernelTest, SaveTempTrue) {
                      TF_GRAPH_DEF_VERSION, &status));
   EXPECT_TRUE(status.ok());
   params.op_kernel = op.get();
-  OpKernelContext* ctx = new OpKernelContext(&params);
+  OpKernelContext* ctx = new OpKernelContext(params);
 
   Tensor t;
-  TF_EXPECT_OK(ctx->allocate_temp(DT_FLOAT, TensorShape(), &t));
+  EXPECT_OK(ctx->allocate_temp(DT_FLOAT, TensorShape(), &t));
 
-  TensorReferenceVector referenced_tensors;
-  ctx->retrieve_accessed_tensors(&referenced_tensors);
-  EXPECT_EQ(1, referenced_tensors.size());
-  for (auto& ref : referenced_tensors) {
-    ref.Unref();
-  }
+  EXPECT_EQ(1, ctx->num_temps());
 
   delete ctx;
   delete params.device;
@@ -377,7 +370,7 @@ class OpKernelBuilderTest : public ::testing::Test {
 
     // Test SupportedDeviceTypesForNode()
     DeviceTypeVector devices;
-    TF_EXPECT_OK(SupportedDeviceTypesForNode(DeviceTypes(), def, &devices));
+    EXPECT_OK(SupportedDeviceTypesForNode(DeviceTypes(), def, &devices));
     bool found = false;
     for (DeviceType dt : devices) {
       if (dt == device_type) {
@@ -411,7 +404,7 @@ class OpKernelBuilderTest : public ::testing::Test {
       // Test SupportedDeviceTypesForNode().
       DeviceTypeVector devices;
       if (errors::IsNotFound(status)) {
-        TF_EXPECT_OK(SupportedDeviceTypesForNode(DeviceTypes(), def, &devices));
+        EXPECT_OK(SupportedDeviceTypesForNode(DeviceTypes(), def, &devices));
         for (DeviceType dt : devices) {
           EXPECT_NE(dt, device_type);
         }
@@ -697,7 +690,7 @@ TEST_F(GetAttrTest, Shape) {
   auto* get_attr_kernel = static_cast<GetAttrKernel*>(op_kernel.get());
   get_attr_kernel->ExpectOk({"shape", "shape_proto"});
   EXPECT_EQ(get_attr_kernel->shape_proto.ShortDebugString(), "dim { size: 3 }");
-  EXPECT_EQ("[3]", get_attr_kernel->shape.DebugString());
+  EXPECT_EQ("[3]", get_attr_kernel->shape.ShortDebugString());
 
   op_kernel = ExpectSuccess(
       "GetAttrShape", DEVICE_CPU,
@@ -711,8 +704,8 @@ TEST_F(GetAttrTest, Shape) {
   EXPECT_EQ(get_attr_kernel->shape_proto_list[1].ShortDebugString(),
             "dim { size: 4 }");
   ASSERT_EQ(2, get_attr_kernel->shape_list.size());
-  EXPECT_EQ("[2]", get_attr_kernel->shape_list[0].DebugString());
-  EXPECT_EQ("[4]", get_attr_kernel->shape_list[1].DebugString());
+  EXPECT_EQ("[2]", get_attr_kernel->shape_list[0].ShortDebugString());
+  EXPECT_EQ("[4]", get_attr_kernel->shape_list[1].ShortDebugString());
 }
 
 REGISTER_OP("GetAttrType").Attr("attr_name: string").Attr("a: type");
@@ -762,20 +755,20 @@ REGISTER_KERNEL_BUILDER(Name("HostMemoryTest")
 
 TEST(MemoryTypesForNode, Simple) {
   NodeDef node_def;
-  TF_ASSERT_OK(NodeDefBuilder("test", "HostMemoryTest")
-                   .Input(FakeInput())
-                   .Input(FakeInput(DT_BOOL))
-                   .Input(FakeInput(3))
-                   .Finalize(&node_def));
+  ASSERT_OK(NodeDefBuilder("test", "HostMemoryTest")
+                .Input(FakeInput())
+                .Input(FakeInput(DT_BOOL))
+                .Input(FakeInput(3))
+                .Finalize(&node_def));
   MemoryTypeVector input, output;
 
-  TF_EXPECT_OK(MemoryTypesForNode(*OpRegistry::Global(), DEVICE_CPU, node_def,
-                                  &input, &output));
+  EXPECT_OK(MemoryTypesForNode(OpRegistry::Global(), DEVICE_CPU, node_def,
+                               &input, &output));
   EXPECT_EQ(MemoryTypeVector(5, DEVICE_MEMORY), input);
   EXPECT_EQ(MemoryTypeVector(3, DEVICE_MEMORY), output);
 
-  TF_EXPECT_OK(MemoryTypesForNode(*OpRegistry::Global(), DEVICE_GPU, node_def,
-                                  &input, &output));
+  EXPECT_OK(MemoryTypesForNode(OpRegistry::Global(), DEVICE_GPU, node_def,
+                               &input, &output));
   EXPECT_EQ(MemoryTypeVector({HOST_MEMORY, DEVICE_MEMORY, HOST_MEMORY,
                               HOST_MEMORY, HOST_MEMORY}),
             input);

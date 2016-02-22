@@ -1,10 +1,6 @@
 licenses(["restricted"])  # MPL2, portions GPL v3, LGPL v3, BSD-like
 
-load("//tensorflow:tensorflow.bzl", "if_cuda")
-load("//tensorflow/core:platform/default/build_config.bzl",
-     "tf_get_cuda_version",
-     "tf_get_cudnn_version",
-    )
+load("/tensorflow/tensorflow", "if_cuda")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -57,10 +53,10 @@ cc_library(
 cc_library(
     name = "cudart",
     srcs = [
-        "lib64/libcudart.so." + tf_get_cuda_version(),
+        "lib64/libcudart.so.7.0",
     ],
     data = [
-        "lib64/libcudart.so." + tf_get_cuda_version(),
+        "lib64/libcudart.so.7.0",
     ],
     includes = ["include/"],
     visibility = ["//visibility:public"],
@@ -70,10 +66,10 @@ cc_library(
 cc_library(
     name = "cublas",
     srcs = [
-        "lib64/libcublas.so." + tf_get_cuda_version(),
+        "lib64/libcublas.so.7.0",
     ],
     data = [
-        "lib64/libcublas.so." + tf_get_cuda_version(),
+        "lib64/libcublas.so.7.0",
     ],
     includes = ["include/"],
     visibility = ["//visibility:public"],
@@ -83,10 +79,10 @@ cc_library(
 cc_library(
     name = "cudnn",
     srcs = [
-        "lib64/libcudnn.so." + tf_get_cudnn_version(),
+        "lib64/libcudnn.so.6.5",
     ],
     data = [
-        "lib64/libcudnn.so." + tf_get_cudnn_version(),
+        "lib64/libcudnn.so.6.5",
     ],
     includes = ["include/"],
     visibility = ["//visibility:public"],
@@ -96,10 +92,10 @@ cc_library(
 cc_library(
     name = "cufft",
     srcs = [
-        "lib64/libcufft.so." + tf_get_cuda_version(),
+        "lib64/libcufft.so.7.0",
     ],
     data = [
-        "lib64/libcufft.so." + tf_get_cuda_version(),
+        "lib64/libcufft.so.7.0",
     ],
     includes = ["include/"],
     visibility = ["//visibility:public"],
@@ -134,10 +130,10 @@ genrule(
         "include/cublas.h",
         "include/cudnn.h",
         "lib64/libcudart_static.a",
-        "lib64/libcublas.so." + tf_get_cuda_version(),
-        "lib64/libcudnn.so." + tf_get_cudnn_version(),
-        "lib64/libcudart.so." + tf_get_cuda_version(),
-        "lib64/libcufft.so." + tf_get_cuda_version(),
+        "lib64/libcublas.so.7.0",
+        "lib64/libcudnn.so.6.5",
+        "lib64/libcudart.so.7.0",
+        "lib64/libcufft.so.7.0",
     ],
     cmd = if_cuda(
         # Under cuda config, create all the symbolic links to the actual cuda files
@@ -151,10 +147,10 @@ genrule(
           "touch $(@D)/include/cublas.h",
           "touch $(@D)/include/cudnn.h",
           "touch $(@D)/lib64/libcudart_static.a",
-          "touch $(@D)/lib64/libcublas.so." + tf_get_cuda_version(),
-          "touch $(@D)/lib64/libcudnn.so." + tf_get_cudnn_version(),
-          "touch $(@D)/lib64/libcudart.so." + tf_get_cuda_version(),
-          "touch $(@D)/lib64/libcufft.so." + tf_get_cuda_version(),
+          "touch $(@D)/lib64/libcublas.so.7.0",
+          "touch $(@D)/lib64/libcudnn.so.6.5",
+          "touch $(@D)/lib64/libcudart.so.7.0",
+          "touch $(@D)/lib64/libcufft.so.7.0"
             ]),
     ),
     local = 1,

@@ -4,8 +4,6 @@ syntax = "proto3";
 
 import "tensorflow/core/example/feature.proto";
 // option cc_enable_arenas = true;
-option java_multiple_files = true;
-option java_package = "org.tensorflow.example";
 
 package tensorflow;
 
@@ -165,13 +163,12 @@ message Example {
 //     an empty list (zero length).
 //   - If a FeatureList L exists, it may be empty (zero length).
 //   - If a FeatureList L is non-empty, all features within the FeatureList
-//     must have data type T.
-//   - If a FeatureList L is non-empty, it is up to the parser configuration
-//     to determine if all features within the FeatureList must
-//     have the same size.  The same holds for this FeatureList across multiple
-//     examples.
+//     must have data type T, and all features within the FeatureList must
+//     have the same size.
 //   - If a FeatureList L exists in one example with data type T,
 //     it must be of type T in all other examples when present.
+//   - If a FeatureList L exists in one example having features' sizes all S,
+//     these sizes must be S in all other examples when present.
 //
 // Examples of conformant and non-conformant examples' FeatureLists:
 //
@@ -189,8 +186,7 @@ message Example {
 //               feature: { int64_list: { value: [ 5 ] } } }
 //    } }
 //
-// Conditionally conformant FeatureLists, the parser configuration determines
-// if the feature sizes must match:
+// Non-conformant FeatureLists (mismatched sizes):
 //    feature_lists: { feature_list: {
 //      key: "movie_ratings"
 //      value: { feature: { float_list: { value: [ 4.5 ] } }
@@ -248,8 +244,7 @@ message Example {
 //               feature: { int64_list: { value: [ 2 ] } } }
 //    } }
 //
-// Conditionally conformant pair of SequenceExample; the parser configuration
-// determines if the feature sizes must match:
+// Non-conformant pair of SequenceExample (mismatched sizes)
 //    feature_lists: { feature_list: {
 //      key: "movie_ratings"
 //      value: { feature: { float_list: { value: [ 4.5 ] } }
@@ -258,7 +253,7 @@ message Example {
 // and:
 //    feature_lists: { feature_list: {
 //      key: "movie_ratings"
-//      value: { feature: { float_list: { value: [ 4.0 ] } }
+//      value: { feature: { float_list: { value: [ 4.0, 5.0 ] } }
 //               feature: { float_list: { value: [ 5.0, 3.0 ] } }
 //    } }
 

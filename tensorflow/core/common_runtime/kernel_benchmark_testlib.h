@@ -20,16 +20,15 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/core/common_runtime/executor.h"
-#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/graph/testlib.h"
 #include "tensorflow/core/lib/core/threadpool.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/platform/port.h"
+#include "tensorflow/core/public/tensor.h"
 
 namespace tensorflow {
 
 class Device;
-struct SessionOptions;
+class SessionOptions;
 
 namespace test {
 

@@ -43,7 +43,7 @@ module tf.graph.scene.annotation {
  * @return selection of appended objects
  */
 export function buildGroup(container, annotationData: render.AnnotationList,
-  d: render.RenderNodeInfo, sceneBehavior) {
+  d: render.RenderNodeInformation, sceneBehavior) {
   // Select all children and join with data.
   let annotationGroups = container.selectAll(function() {
        // using d3's selector function
@@ -151,7 +151,7 @@ function addAnnotationLabel(aGroup, label, a, additionalClassNames,
                 .append("title").text(titleText);
 }
 
-function addInteraction(selection, d: render.RenderNodeInfo,
+function addInteraction(selection, d: render.RenderNodeInformation,
     annotation: tf.graph.render.Annotation, sceneBehavior) {
   selection
     .on("mouseover", a => {
@@ -190,9 +190,8 @@ function addInteraction(selection, d: render.RenderNodeInfo,
  * @param a annotation node data.
  * @param scene Polymer scene element.
  */
-function update(aGroup, d: render.RenderNodeInfo, a: render.Annotation,
+function update(aGroup, d: render.RenderNodeInformation, a: render.Annotation,
     sceneBehavior) {
-  let cx = layout.computeCXPositionOfNodeShape(d);
   // Annotations that point to embedded nodes (constants,summary)
   // don't have a render information attached so we don't stylize these.
   // Also we don't stylize ellipsis annotations (the string "... and X more").
@@ -209,7 +208,7 @@ function update(aGroup, d: render.RenderNodeInfo, a: render.Annotation,
 
   // label position
   aGroup.select("text." + Class.Annotation.LABEL).transition().attr({
-    x: cx + a.dx + (a.isIn ? -1 : 1) * (a.width / 2 + a.labelOffset),
+    x: d.x + a.dx + (a.isIn ? -1 : 1) * (a.width / 2 + a.labelOffset),
     y: d.y + a.dy
   });
 
@@ -219,23 +218,23 @@ function update(aGroup, d: render.RenderNodeInfo, a: render.Annotation,
   // centered with the node and horizontally centered between the arrow and the
   // text label.
   aGroup.select("use.summary").transition().attr({
-    x: cx + a.dx - 3,
+    x: d.x + a.dx - 3,
     y: d.y + a.dy - 6
   });
 
   // Node position (only one of the shape selection will be non-empty.)
   scene.positionEllipse(aGroup.select("." + Class.Annotation.NODE + " ellipse"),
-                        cx + a.dx, d.y + a.dy, a.width, a.height);
+                        d.x + a.dx, d.y + a.dy, a.width, a.height);
   scene.positionRect(aGroup.select("." + Class.Annotation.NODE + " rect"),
-                     cx + a.dx, d.y + a.dy, a.width, a.height);
+                     d.x + a.dx, d.y + a.dy, a.width, a.height);
   scene.positionRect(aGroup.select("." + Class.Annotation.NODE + " use"),
-                     cx + a.dx, d.y + a.dy, a.width, a.height);
+                     d.x + a.dx, d.y + a.dy, a.width, a.height);
 
   // Edge position
   aGroup.select("path." + Class.Annotation.EDGE).transition().attr("d", a => {
         // map relative position to absolute position
         let points = a.points.map(p => {
-          return {x: p.dx + cx, y: p.dy + d.y};
+          return {x: p.dx + d.x, y: p.dy + d.y};
         });
         return edge.interpolate(points);
       });

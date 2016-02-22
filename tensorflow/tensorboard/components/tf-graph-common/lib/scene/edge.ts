@@ -19,9 +19,9 @@ limitations under the License.
 
 module tf.graph.scene.edge {
 
-export type EdgeData = {v: string, w: string, label: render.RenderMetaedgeInfo};
+let Scene = tf.graph.scene; // Aliased
 
-export function getEdgeKey(edgeObj: EdgeData) {
+export function getEdgeKey(edgeObj) {
   return edgeObj.v + tf.graph.EDGE_KEY_DELIM + edgeObj.w;
 }
 
@@ -45,9 +45,8 @@ export function getEdgeKey(edgeObj: EdgeData) {
  * @return selection of the created nodeGroups
  */
 export function buildGroup(sceneGroup,
-  graph: graphlib.Graph<tf.graph.render.RenderNodeInfo,
-    tf.graph.render.RenderMetaedgeInfo>, sceneBehavior) {
-  let edges: EdgeData[] = [];
+  graph: graphlib.Graph<tf.graph.render.RenderNodeInformation,
+    tf.graph.render.RenderMetaedgeInformation>, sceneBehavior) {
   let edgeData = _.reduce(graph.edges(), (edges, edgeObj) => {
     let edgeLabel = graph.edge(edgeObj);
     edges.push({
@@ -56,10 +55,11 @@ export function buildGroup(sceneGroup,
       label: edgeLabel
     });
     return edges;
-  }, edges);
+  }, []);
 
   let container = scene.selectOrCreateChild(sceneGroup, "g",
      Class.Edge.CONTAINER);
+  let containerNode = container.node();
 
   // Select all children and join with data.
   // (Note that all children of g.edges are g.edge)
@@ -76,7 +76,7 @@ export function buildGroup(sceneGroup,
     .append("g")
     .attr("class", Class.Edge.GROUP)
     .attr("data-edge", getEdgeKey)
-    .each(function(d: EdgeData) {
+    .each(function(d) {
       let edgeGroup = d3.select(this);
       d.label.edgeGroup = edgeGroup;
       // index node group for quick highlighting
@@ -108,11 +108,11 @@ export function buildGroup(sceneGroup,
  * For a given d3 selection and data object, create a path to represent the
  * edge described in d.label.
  *
- * If d.label is defined, it will be a RenderMetaedgeInfo instance. It
+ * If d.label is defined, it will be a RenderMetaedgeInformation instance. It
  * will sometimes be undefined, for example for some Annotation edges for which
  * there is no underlying Metaedge in the hierarchical graph.
  */
-export function appendEdge(edgeGroup, d: EdgeData, sceneBehavior, edgeClass?) {
+export function appendEdge(edgeGroup, d, sceneBehavior, edgeClass?) {
   edgeClass = edgeClass || Class.Edge.LINE; // set default type
 
   if (d.label && d.label.structural) {
@@ -123,16 +123,11 @@ export function appendEdge(edgeGroup, d: EdgeData, sceneBehavior, edgeClass?) {
     .attr("class", edgeClass);
 };
 
-export let interpolate = d3.svg.line<{x: number, y: number}>()
-  .interpolate("basis")
-  .x((d) => { return d.x; })
-  .y((d) => { return d.y; });
-
 /**
  * Returns a tween interpolator for the endpoint of an edge path.
  */
-function getEdgePathInterpolator(d: EdgeData, i: number, a: string) {
-  let renderMetaedgeInfo = <render.RenderMetaedgeInfo> d.label;
+function getEdgePathInterpolator(d, i, a) {
+  let renderMetaedgeInfo = d.label;
   let adjoiningMetaedge = renderMetaedgeInfo.adjoiningMetaedge;
   if (!adjoiningMetaedge) {
     return d3.interpolate(a, interpolate(renderMetaedgeInfo.points));
@@ -167,6 +162,11 @@ function getEdgePathInterpolator(d: EdgeData, i: number, a: string) {
   };
 }
 
+export let interpolate = d3.svg.line()
+  .interpolate("basis")
+  .x((d: any) => { return d.x; })
+  .y((d: any) => { return d.y; });
+
 function position(d) {
   d3.select(this).select("path." + Class.Edge.LINE)
     .each(function(d) {
@@ -179,9 +179,10 @@ function position(d) {
  * For a given d3 selection and data object, mark the edge as a control
  * dependency if it contains only control edges.
  *
- * d's label property will be a RenderMetaedgeInfo object.
+ * d's label property will be a RenderMetaedgeInformation object.
  */
-function stylize(edgeGroup, d: EdgeData, stylize) {
+function stylize(edgeGroup, d, stylize) {
+  let a;
   let metaedge = d.label.metaedge;
   edgeGroup
     .select("path." + Class.Edge.LINE)
